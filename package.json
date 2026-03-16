@@ -1,0 +1,49 @@
+{
+  "name": "ui-evidence",
+  "version": "0.1.0",
+  "description": "LLM-first UI before/after screenshot capture, comparison, and Markdown evidence pipeline.",
+  "type": "module",
+  "bin": {
+    "ui-evidence": "./bin/ui-evidence.mjs"
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "README.ko.md",
+    "bin",
+    "docs/installation.md",
+    "examples/generic-web/ui-evidence.config.yaml",
+    "examples/next-playwright/hooks/capture-flag.mjs",
+    "examples/next-playwright/ui-evidence.config.yaml",
+    "examples/storybook/ui-evidence.config.yaml",
+    "examples/vite-react/ui-evidence.config.yaml",
+    "schemas",
+    "skills",
+    "src",
+    "templates"
+  ],
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "schema:print": "node ./bin/ui-evidence.mjs schema --print",
+    "help": "node ./bin/ui-evidence.mjs help",
+    "test": "node --test"
+  },
+  "keywords": [
+    "llm",
+    "playwright",
+    "visual-regression",
+    "screenshots",
+    "ui-review",
+    "agent-skill"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@playwright/test": "^1.54.2",
+    "ajv": "^8.17.1",
+    "sharp": "^0.34.3",
+    "yaml": "^2.8.1"
+  }
+}

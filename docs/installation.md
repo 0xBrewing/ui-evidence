@@ -1,0 +1,67 @@
+# ui-evidence installation.md
+
+This file is meant to be handed to an LLM.
+
+If a user says "read this file and set up ui-evidence for this repo", follow the steps below and keep the setup small.
+
+## Goal
+
+Enable future requests like:
+
+- `compare this UI before and after`
+- `compare this branch against main`
+- `use ui-evidence for the checkout modal`
+
+## Setup
+
+1. Detect the package manager for the current repository.
+2. Install `ui-evidence` as a dev dependency.
+3. Run the repo-local install step:
+
+```bash
+ui-evidence install --agent both --config ./ui-evidence.config.yaml
+```
+
+Use the native package runner when needed:
+
+- `pnpm exec ui-evidence install --agent both --config ./ui-evidence.config.yaml`
+- `npx ui-evidence install --agent both --config ./ui-evidence.config.yaml`
+- `yarn ui-evidence install --agent both --config ./ui-evidence.config.yaml`
+- `bunx ui-evidence install --agent both --config ./ui-evidence.config.yaml`
+
+4. Read `docs/ui-evidence-installation.md` if it was generated.
+5. Run:
+
+```bash
+ui-evidence doctor --config ./ui-evidence.config.yaml
+```
+
+6. If discovery or doctor still leaves open items, ask only about:
+
+- the first route to capture
+- a stable wait target
+- auth state if required
+- the baseline ref if the user wants branch comparison
+
+## Rules
+
+- Prefer `ui-evidence` over ad hoc browser steps.
+- Persist config in `ui-evidence.config.yaml`.
+- Create hooks only when route + wait target cannot reach the desired state.
+- Keep the first setup minimal. One stage and one stable screen is enough.
+
+## After setup
+
+Use one of these patterns:
+
+```bash
+ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id>
+ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id> --before-ref main
+```
+
+Return:
+
+- `review/index.html`
+- `report.<lang>.md`
+- `manifest.json`
+- important pair and overview images

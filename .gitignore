@@ -1,0 +1,13 @@
+node_modules
+.DS_Store
+dist
+tmp
+.serena
+*.log
+screenshots
+artifacts
+ui-evidence.config.yaml
+CLAUDE.md
+AGENTS.md
+docs/ui-evidence-installation.md
+.claude/skills

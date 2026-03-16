@@ -1,0 +1,226 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ui-evidence.dev/schemas/ui-evidence.schema.json",
+  "title": "ui-evidence config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "project", "artifacts", "capture", "stages"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "rootDir": { "type": "string", "default": "." }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rootDir"],
+      "properties": {
+        "rootDir": { "type": "string", "minLength": 1 },
+        "notesLanguage": { "type": "string", "default": "en" },
+        "reportLanguage": { "type": "string", "default": "en" },
+        "overviewViewport": { "type": "string" }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["viewports"],
+      "properties": {
+        "baseUrl": { "type": "string" },
+        "viewports": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/viewport" }
+        },
+        "browser": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "headless": { "type": "boolean", "default": true },
+            "freezeAnimations": { "type": "boolean", "default": true },
+            "waitForFonts": { "type": "boolean", "default": true },
+            "waitForNetworkIdleMs": { "type": "integer", "minimum": 0, "default": 2000 }
+          }
+        }
+      }
+    },
+    "servers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "before": { "$ref": "#/$defs/server" },
+        "after": { "$ref": "#/$defs/server" }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "git": { "$ref": "#/$defs/gitBaseline" }
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "language": { "type": "string", "default": "en" },
+        "checklist": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/stage" }
+    }
+  },
+  "$defs": {
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseUrl"],
+      "properties": {
+        "baseUrl": { "type": "string" },
+        "command": { "type": "string" },
+        "cwd": { "type": "string" },
+        "readyUrl": { "type": "string" },
+        "timeoutMs": { "type": "integer", "minimum": 1000, "default": 60000 },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "gitBaseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "worktreeDir": { "type": "string" },
+        "installCommand": { "type": "string" },
+        "server": { "$ref": "#/$defs/server" }
+      }
+    },
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "device": { "type": "string" },
+        "locale": { "type": "string" },
+        "timezoneId": { "type": "string" },
+        "colorScheme": {
+          "type": "string",
+          "enum": ["light", "dark", "no-preference"]
+        },
+        "viewport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "storageState": { "type": "string" },
+        "bootstrapRequest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["url"],
+          "properties": {
+            "url": { "type": "string" },
+            "method": {
+              "type": "string",
+              "default": "POST"
+            },
+            "headers": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "json": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "waitFor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "testId": { "type": "string" },
+        "selector": { "type": "string" },
+        "timeoutMs": { "type": "integer", "minimum": 1, "default": 30000 }
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "setup": { "type": "string" },
+        "prepare": { "type": "string" }
+      }
+    },
+    "screenshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fullPage": { "type": "boolean", "default": true }
+      }
+    },
+    "screen": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "path"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "fileId": { "type": "string" },
+        "label": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "locale": { "type": "string" },
+        "auth": { "$ref": "#/$defs/auth" },
+        "waitFor": { "$ref": "#/$defs/waitFor" },
+        "hooks": { "$ref": "#/$defs/hooks" },
+        "screenshot": { "$ref": "#/$defs/screenshot" }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "description", "screens"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "defaultViewports": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "screens": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/screen" }
+        }
+      }
+    }
+  }
+}

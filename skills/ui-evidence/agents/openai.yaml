@@ -1,0 +1,4 @@
+version: 1
+display_name: UI Evidence
+short_description: Discover a web app, capture before/after UI states, and generate a local review page plus evidence artifacts.
+default_prompt: Generate or update ui-evidence config, run the evidence workflow, and summarize the review artifacts for this repo.
