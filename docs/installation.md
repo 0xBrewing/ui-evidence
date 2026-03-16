@@ -15,7 +15,17 @@ Enable future requests like:
 ## Setup
 
 1. Detect the package manager for the current repository.
-2. Install `ui-evidence` as a dev dependency.
+2. Install `ui-evidence` as a dev dependency from GitHub.
+
+Use one of:
+
+```bash
+pnpm add -D github:0xBrewing/ui-evidence
+npm install -D github:0xBrewing/ui-evidence
+yarn add -D github:0xBrewing/ui-evidence
+bun add -d github:0xBrewing/ui-evidence
+```
+
 3. Run the repo-local install step:
 
 ```bash

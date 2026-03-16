@@ -14,27 +14,59 @@
 - `main` 같은 git ref를 `before` 기준으로 사용
 - consumer repo용 Claude Code / Codex bootstrap 파일 생성
 
+## 함께 쓰기 좋은 환경
+
+- Codex CLI
+- Claude Code
+- 안정적인 route와 wait target이 있는 로컬 웹앱
+- 현재 checkout, 실행 중인 URL, 다른 git ref 중 하나에서 `before`를 만들 수 있는 저장소
+
 ## 설치
 
-```bash
-pnpm add -D ui-evidence
-```
+### 사람용 설치
 
-필요하면 `npm`, `yarn`, `bun`에 맞는 명령으로 바꿔서 사용하면 됩니다.
-
-## 빠른 시작
-
-config와 에이전트 bootstrap 파일 생성:
+리뷰하려는 앱 저장소에 GitHub 기준으로 설치:
 
 ```bash
+pnpm add -D github:0xBrewing/ui-evidence
 pnpm exec ui-evidence install --agent both --config ./ui-evidence.config.yaml
-```
-
-설정 점검:
-
-```bash
 pnpm exec ui-evidence doctor --config ./ui-evidence.config.yaml
 ```
+
+동등한 설치 명령:
+
+```bash
+npm install -D github:0xBrewing/ui-evidence
+yarn add -D github:0xBrewing/ui-evidence
+bun add -d github:0xBrewing/ui-evidence
+```
+
+`ui-evidence` 자체를 개발하려면:
+
+```bash
+git clone https://github.com/0xBrewing/ui-evidence.git
+cd ui-evidence
+pnpm install
+pnpm test
+```
+
+### LLM 설치용
+
+Codex CLI나 Claude Code 안에서는 아래 프롬프트를 그대로 주면 됩니다.
+
+```text
+Read https://raw.githubusercontent.com/0xBrewing/ui-evidence/main/docs/installation.md
+and set up ui-evidence for this repository.
+Keep the first setup minimal and ask only about unresolved route, wait target, auth, or baseline details.
+```
+
+이미 repo 안에 `ui-evidence`가 설치되어 있다면 아래처럼 요청해도 됩니다.
+
+```text
+Read node_modules/ui-evidence/docs/installation.md and set up ui-evidence for this repository.
+```
+
+## 빠른 시작
 
 한 stage 실행:
 
@@ -56,9 +88,9 @@ screenshots/ui-evidence/<stage-id>/review/index.html
 
 ## Codex 또는 Claude Code와 함께 쓰기
 
-LLM에게 [docs/installation.md](./docs/installation.md)를 읽고 현재 저장소에 `ui-evidence`를 세팅하라고 요청하면 됩니다.
+`ui-evidence`는 에이전트가 브라우저를 즉흥적으로 조작하는 대신 CLI를 호출할 때 가장 안정적으로 동작합니다.
 
-이 문서는 소개 문서가 아니라 설치 플레이북입니다. 의도한 흐름은 아래와 같습니다.
+기본 흐름은 아래와 같습니다.
 
 1. `ui-evidence` 설치
 2. `ui-evidence install` 실행
@@ -128,6 +160,17 @@ screenshots/ui-evidence/<stage-id>/
 - [docs/installation.md](./docs/installation.md)
 - [examples/generic-web/ui-evidence.config.yaml](./examples/generic-web/ui-evidence.config.yaml)
 - [skills/ui-evidence/SKILL.md](./skills/ui-evidence/SKILL.md)
+
+## 기여하기
+
+Issue와 PR 모두 환영합니다.
+
+특히 아래 영역은 오픈소스 기여 가치가 큽니다.
+
+- 설치 UX
+- agent bootstrap
+- HTML review 출력
+- framework preset 확장
 
 ## 라이선스
 

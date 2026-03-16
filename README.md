@@ -14,27 +14,59 @@ It is designed for agent-driven workflows, but the CLI stays the source of truth
 - supports `main` or another git ref as the `before` baseline
 - scaffolds Claude Code and Codex bootstrap files for a consumer repo
 
+## Works with
+
+- Codex CLI
+- Claude Code
+- any local web app with a stable route and wait target
+- any repo where `before` can come from the current checkout, a running URL, or another git ref
+
 ## Install
 
-```bash
-pnpm add -D ui-evidence
-```
+### For humans
 
-Use the equivalent command for `npm`, `yarn`, or `bun` if needed.
-
-## Quick start
-
-Scaffold the config and agent bootstrap files:
+Install from GitHub into the app repo you want to review:
 
 ```bash
+pnpm add -D github:0xBrewing/ui-evidence
 pnpm exec ui-evidence install --agent both --config ./ui-evidence.config.yaml
-```
-
-Validate the setup:
-
-```bash
 pnpm exec ui-evidence doctor --config ./ui-evidence.config.yaml
 ```
+
+Equivalent install commands:
+
+```bash
+npm install -D github:0xBrewing/ui-evidence
+yarn add -D github:0xBrewing/ui-evidence
+bun add -d github:0xBrewing/ui-evidence
+```
+
+If you want to work on `ui-evidence` itself:
+
+```bash
+git clone https://github.com/0xBrewing/ui-evidence.git
+cd ui-evidence
+pnpm install
+pnpm test
+```
+
+### For LLM setup
+
+If you are in Codex CLI or Claude Code, give the agent this prompt:
+
+```text
+Read https://raw.githubusercontent.com/0xBrewing/ui-evidence/main/docs/installation.md
+and set up ui-evidence for this repository.
+Keep the first setup minimal and ask only about unresolved route, wait target, auth, or baseline details.
+```
+
+If `ui-evidence` is already installed in the repo, this also works:
+
+```text
+Read node_modules/ui-evidence/docs/installation.md and set up ui-evidence for this repository.
+```
+
+## Quick start
 
 Run one stage:
 
@@ -56,9 +88,9 @@ screenshots/ui-evidence/<stage-id>/review/index.html
 
 ## Use with Codex or Claude Code
 
-Give the LLM [docs/installation.md](./docs/installation.md) and tell it to set up `ui-evidence` for the current repository.
+`ui-evidence` works best when the agent uses the CLI instead of improvising browser steps.
 
-That file is written as an installation playbook, not as marketing copy. The intended flow is:
+The intended flow is:
 
 1. install `ui-evidence`
 2. run `ui-evidence install`
@@ -127,6 +159,16 @@ screenshots/ui-evidence/<stage-id>/
 
 - [docs/installation.md](./docs/installation.md)
 - [examples/generic-web/ui-evidence.config.yaml](./examples/generic-web/ui-evidence.config.yaml)
+- [skills/ui-evidence/SKILL.md](./skills/ui-evidence/SKILL.md)
+
+## Contributing
+
+Issues and pull requests are welcome.
+
+If you want to improve setup UX, agent bootstrap, or HTML review output, start with:
+
+- [README.md](./README.md)
+- [docs/installation.md](./docs/installation.md)
 - [skills/ui-evidence/SKILL.md](./skills/ui-evidence/SKILL.md)
 
 ## License
