@@ -21,6 +21,18 @@ It is designed for agent-driven workflows, but the CLI stays the source of truth
 - any local web app with a stable route and wait target
 - any repo where `before` can come from the current checkout, a running URL, or another git ref
 
+## Supported project types
+
+- single-package Next.js apps
+- single-package Vite/React apps
+- Storybook setups with a stable review route
+- generic web apps that can be opened by URL and waited on with a stable selector
+- JavaScript workspaces using `pnpm`, `yarn`, or `npm` workspaces where the review app lives under a declared workspace package such as `apps/*` or `packages/*`
+
+Current limit:
+
+- arbitrary nested apps without workspace metadata are not a discovery target yet
+
 ## Install
 
 ### For humans
@@ -31,6 +43,7 @@ Install from GitHub into the app repo you want to review:
 pnpm add -D github:0xBrewing/ui-evidence
 pnpm exec ui-evidence install --agent both --config ./ui-evidence.config.yaml
 pnpm exec ui-evidence doctor --config ./ui-evidence.config.yaml
+pnpm exec ui-evidence doctor --config ./ui-evidence.config.yaml --deep
 ```
 
 Equivalent install commands:
@@ -95,7 +108,7 @@ The intended flow is:
 1. install `ui-evidence`
 2. run `ui-evidence install`
 3. fix only unresolved config values
-4. run `ui-evidence doctor`
+4. run `ui-evidence doctor`, then `ui-evidence doctor --deep` when you want an actual route and wait-target check
 5. use `ui-evidence run` for later UI comparison requests
 
 After setup, users can ask for UI comparison either explicitly or in plain language:

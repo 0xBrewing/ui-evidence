@@ -1,11 +1,14 @@
 import path from 'node:path';
-import { fileExists } from '../util/fs.mjs';
-import { loadConfig, resolveProjectPath } from '../../config/load-config.mjs';
-import { discoverProject } from '../discover/discover-project.mjs';
-import { loadHook } from '../util/hooks.mjs';
 import { chromium } from '@playwright/test';
-import { resolveBaselineOptions } from '../baseline/git-baseline.mjs';
+import { loadConfig, resolveProjectPath } from '../../config/load-config.mjs';
+import { openPreparedScreen } from '../capture/playwright-capture.mjs';
+import { discoverProject } from '../discover/discover-project.mjs';
+import { resolveBaselineOptions, prepareGitBaseline } from '../baseline/git-baseline.mjs';
+import { startServer, stopServer } from '../server/process-server.mjs';
+import { loadHook } from '../util/hooks.mjs';
+import { fileExists } from '../util/fs.mjs';
 import { runCommandSync } from '../util/process.mjs';
+import { resolveBaseUrl, selectScreens, selectStages, selectViewports } from '../util/selection.mjs';
 
 async function probeUrl(url, timeoutMs = 3_000) {
   const controller = new AbortController();
@@ -26,40 +29,97 @@ async function probeUrl(url, timeoutMs = 3_000) {
   }
 }
 
+function uniqueUrls(values) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function makeCheck(key, status, message) {
+  return { key, status, message };
+}
+
+async function runDeepPhaseValidation({
+  checks,
+  config,
+  phase,
+  stageArg,
+  screenIds,
+  baseUrlOverride,
+  serverOverrides,
+  serverLabel,
+  language,
+}) {
+  let serverHandle = null;
+  let browser = null;
+
+  try {
+    serverHandle = await startServer(config, phase, serverOverrides);
+    browser = await chromium.launch({ headless: true });
+    checks.push(makeCheck(`deep:${phase}:server`, 'pass', `Deep validation is using ${resolveBaseUrl(config, phase, baseUrlOverride)}.`));
+  } catch (error) {
+    checks.push(makeCheck(
+      `deep:${phase}:server`,
+      'fail',
+      `Unable to prepare ${serverLabel}: ${error instanceof Error ? error.message : String(error)}`,
+    ));
+    await stopServer(serverHandle);
+    await browser?.close().catch(() => {});
+    return;
+  }
+
+  try {
+    const stages = selectStages(config, stageArg);
+    const baseUrl = resolveBaseUrl(config, phase, baseUrlOverride);
+    for (const stage of stages) {
+      const viewport = selectViewports(config, stage, [])[0];
+      const selectedScreens = selectScreens(stage, screenIds);
+      for (const screen of selectedScreens) {
+        const key = `deep:${phase}:${stage.id}/${screen.id}`;
+        try {
+          const { context } = await openPreparedScreen({
+            browser,
+            config,
+            stage,
+            screen,
+            viewport,
+            phase,
+            baseUrl,
+            language,
+          });
+          await context.close();
+          checks.push(makeCheck(key, 'pass', `${screen.path} is reachable and its wait target resolves (${viewport.id}).`));
+        } catch (error) {
+          checks.push(makeCheck(key, 'fail', error instanceof Error ? error.message : String(error)));
+        }
+      }
+    }
+  } finally {
+    await stopServer(serverHandle);
+    await browser?.close().catch(() => {});
+  }
+}
+
 export async function runDoctor(options = {}) {
   const checks = [];
   const configPath = options.config ?? 'ui-evidence.config.yaml';
   const configExists = await fileExists(path.resolve(process.cwd(), configPath));
 
-  checks.push({
-    key: 'node-version',
-    status: Number(process.versions.node.split('.')[0]) >= 20 ? 'pass' : 'fail',
-    message: `Node.js ${process.versions.node}`,
-  });
+  checks.push(makeCheck(
+    'node-version',
+    Number(process.versions.node.split('.')[0]) >= 20 ? 'pass' : 'fail',
+    `Node.js ${process.versions.node}`,
+  ));
 
   try {
     const browser = await chromium.launch({ headless: true });
     await browser.close();
-    checks.push({
-      key: 'playwright-chromium',
-      status: 'pass',
-      message: 'Playwright Chromium is available.',
-    });
+    checks.push(makeCheck('playwright-chromium', 'pass', 'Playwright Chromium is available.'));
   } catch (error) {
-    checks.push({
-      key: 'playwright-chromium',
-      status: 'fail',
-      message: error instanceof Error ? error.message : String(error),
-    });
+    checks.push(makeCheck('playwright-chromium', 'fail', error instanceof Error ? error.message : String(error)));
   }
 
   if (!configExists) {
     const discovery = await discoverProject({ cwd: process.cwd() });
-    checks.push({
-      key: 'config',
-      status: 'warn',
-      message: `No config found at ${configPath}. Run "ui-evidence init --interactive" to create one.`,
-    });
+    checks.push(makeCheck('config', 'warn', `No config found at ${configPath}. Run "ui-evidence init --interactive" to create one.`));
     return {
       ok: checks.every((item) => item.status !== 'fail'),
       checks,
@@ -70,17 +130,9 @@ export async function runDoctor(options = {}) {
   let config = null;
   try {
     config = await loadConfig(configPath);
-    checks.push({
-      key: 'config',
-      status: 'pass',
-      message: `Loaded ${config.meta.configPath}`,
-    });
+    checks.push(makeCheck('config', 'pass', `Loaded ${config.meta.configPath}`));
   } catch (error) {
-    checks.push({
-      key: 'config',
-      status: 'fail',
-      message: error instanceof Error ? error.message : String(error),
-    });
+    checks.push(makeCheck('config', 'fail', error instanceof Error ? error.message : String(error)));
     return {
       ok: false,
       checks,
@@ -95,24 +147,24 @@ export async function runDoctor(options = {}) {
 
   for (const url of urlChecks) {
     const result = await probeUrl(url);
-    checks.push({
-      key: `url:${url}`,
-      status: result.ok ? 'pass' : 'warn',
-      message: result.ok
+    checks.push(makeCheck(
+      `url:${url}`,
+      result.ok ? 'pass' : 'warn',
+      result.ok
         ? `Reachable: ${url}${result.status ? ` (${result.status})` : ''}`
         : `Not reachable yet: ${url}${result.error ? ` (${result.error})` : ''}`,
-    });
+    ));
   }
 
   for (const stage of config.stages) {
     for (const screen of stage.screens) {
       if (screen.auth?.storageState) {
         const storageStatePath = resolveProjectPath(config, screen.auth.storageState);
-        checks.push({
-          key: `storage:${stage.id}/${screen.id}`,
-          status: (await fileExists(storageStatePath)) ? 'pass' : 'warn',
-          message: `storageState ${storageStatePath}`,
-        });
+        checks.push(makeCheck(
+          `storage:${stage.id}/${screen.id}`,
+          (await fileExists(storageStatePath)) ? 'pass' : 'warn',
+          `storageState ${storageStatePath}`,
+        ));
       }
 
       for (const hookType of ['setup', 'prepare']) {
@@ -123,17 +175,13 @@ export async function runDoctor(options = {}) {
 
         try {
           await loadHook(config, specifier);
-          checks.push({
-            key: `hook:${stage.id}/${screen.id}/${hookType}`,
-            status: 'pass',
-            message: `Loaded ${specifier}`,
-          });
+          checks.push(makeCheck(`hook:${stage.id}/${screen.id}/${hookType}`, 'pass', `Loaded ${specifier}`));
         } catch (error) {
-          checks.push({
-            key: `hook:${stage.id}/${screen.id}/${hookType}`,
-            status: 'fail',
-            message: error instanceof Error ? error.message : String(error),
-          });
+          checks.push(makeCheck(
+            `hook:${stage.id}/${screen.id}/${hookType}`,
+            'fail',
+            error instanceof Error ? error.message : String(error),
+          ));
         }
       }
     }
@@ -144,26 +192,75 @@ export async function runDoctor(options = {}) {
     const refCheck = runCommandSync('git', ['rev-parse', '--verify', baseline.ref], {
       cwd: config.meta.projectRoot,
     });
-    checks.push({
-      key: 'baseline-ref',
-      status: refCheck.status === 0 ? 'pass' : 'fail',
-      message: refCheck.status === 0
+    checks.push(makeCheck(
+      'baseline-ref',
+      refCheck.status === 0 ? 'pass' : 'fail',
+      refCheck.status === 0
         ? `Baseline ref ${baseline.ref} is available.`
         : `Baseline ref ${baseline.ref} was not found.`,
-    });
+    ));
 
     if (baseline.server?.command && baseline.server?.baseUrl) {
-      checks.push({
-        key: 'baseline-server',
-        status: 'pass',
-        message: `Baseline server will use ${baseline.server.command}`,
-      });
+      checks.push(makeCheck('baseline-server', 'pass', `Baseline server will use ${baseline.server.command}`));
     } else {
-      checks.push({
-        key: 'baseline-server',
-        status: 'warn',
-        message: 'Baseline ref is configured, but no reusable server command/baseUrl was found yet.',
-      });
+      checks.push(makeCheck(
+        'baseline-server',
+        'warn',
+        'Baseline ref is configured, but no reusable server command/baseUrl was found yet.',
+      ));
+    }
+  }
+
+  if (options.deep) {
+    const language = config.report?.language ?? config.artifacts.reportLanguage ?? 'en';
+    await runDeepPhaseValidation({
+      checks,
+      config,
+      phase: 'after',
+      stageArg: options.stageArg ?? 'all',
+      screenIds: options.screenIds ?? [],
+      baseUrlOverride: undefined,
+      serverOverrides: {},
+      serverLabel: 'after server',
+      language,
+    });
+
+    if (options.beforeRef) {
+      let preparedBaseline = null;
+      try {
+        preparedBaseline = await prepareGitBaseline(config, options.beforeRef);
+        if (!preparedBaseline?.server?.baseUrl) {
+          checks.push(makeCheck(
+            'deep:before:server',
+            'fail',
+            `Baseline ref "${options.beforeRef}" does not provide a reusable baseUrl for deep validation.`,
+          ));
+        } else {
+          await runDeepPhaseValidation({
+            checks,
+            config,
+            phase: 'before',
+            stageArg: options.stageArg ?? 'all',
+            screenIds: options.screenIds ?? [],
+            baseUrlOverride: preparedBaseline.server.baseUrl,
+            serverOverrides: {
+              server: preparedBaseline.server,
+              cwd: preparedBaseline.server.cwd ?? preparedBaseline.worktreeDir,
+              label: 'baseline-before',
+            },
+            serverLabel: `baseline ref ${options.beforeRef}`,
+            language,
+          });
+        }
+      } catch (error) {
+        checks.push(makeCheck(
+          'deep:before:server',
+          'fail',
+          error instanceof Error ? error.message : String(error),
+        ));
+      } finally {
+        await preparedBaseline?.cleanup?.();
+      }
     }
   }
 
@@ -171,10 +268,6 @@ export async function runDoctor(options = {}) {
     ok: checks.every((item) => item.status !== 'fail'),
     checks,
   };
-}
-
-function uniqueUrls(values) {
-  return Array.from(new Set(values.filter(Boolean)));
 }
 
 export function formatDoctorResult(result, format = 'text') {

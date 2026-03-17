@@ -63,6 +63,17 @@ function buildResolvedServer(config) {
   return fallback;
 }
 
+function resolveBaselineServer(server, worktreeDir) {
+  if (!server) {
+    return null;
+  }
+
+  return {
+    ...server,
+    cwd: server.cwd ? path.resolve(worktreeDir, server.cwd) : worktreeDir,
+  };
+}
+
 export function resolveBaselineOptions(config, beforeRefOverride) {
   const gitConfig = config.baseline?.git ?? {};
   const ref = beforeRefOverride ?? gitConfig.ref;
@@ -108,8 +119,11 @@ export async function prepareGitBaseline(config, beforeRefOverride) {
     });
   }
 
+  const resolvedServer = resolveBaselineServer(baseline.server, baseline.worktreeDir);
+
   return {
     ...baseline,
+    server: resolvedServer,
     cleanup: async () => {
       await runCommand(`git worktree remove --force "${baseline.worktreeDir}"`, {
         cwd: config.meta.projectRoot,

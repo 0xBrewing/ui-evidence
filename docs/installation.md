@@ -12,6 +12,16 @@ Enable future requests like:
 - `compare this branch against main`
 - `use ui-evidence for the checkout modal`
 
+## Best fit repositories
+
+- single-package Next.js or Vite apps
+- Storybook projects with a stable review route
+- JavaScript workspaces declared through `pnpm`, `yarn`, or `npm` workspaces
+
+Current limit:
+
+- non-workspace nested apps may still need manual correction after discovery
+
 ## Setup
 
 1. Detect the package manager for the current repository.
@@ -44,6 +54,7 @@ Use the native package runner when needed:
 
 ```bash
 ui-evidence doctor --config ./ui-evidence.config.yaml
+ui-evidence doctor --config ./ui-evidence.config.yaml --deep
 ```
 
 6. If discovery or doctor still leaves open items, ask only about:

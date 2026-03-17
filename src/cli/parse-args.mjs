@@ -9,6 +9,11 @@ export function parseArgv(argv) {
 
   for (let index = 0; index < rest.length; index += 1) {
     const token = rest[index];
+    if (token === '-h' || token === '--help') {
+      options.help = true;
+      continue;
+    }
+
     if (!token.startsWith('--')) {
       positionals.push(token);
       continue;

@@ -95,7 +95,7 @@ async function ensureStorageState(config, screen) {
   return resolvedPath;
 }
 
-async function captureScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language }) {
+export async function openPreparedScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language }) {
   const contextOptions = buildContextOptions(viewport);
   const storageStatePath = await ensureStorageState(config, screen);
   if (storageStatePath) {
@@ -128,6 +128,26 @@ async function captureScreen({ browser, config, stage, screen, viewport, phase, 
       await settlePage(page, config.capture);
     }
 
+    return { context, page };
+  } catch (error) {
+    await context.close().catch(() => {});
+    throw error;
+  }
+}
+
+async function captureScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language }) {
+  const { context, page } = await openPreparedScreen({
+    browser,
+    config,
+    stage,
+    screen,
+    viewport,
+    phase,
+    baseUrl,
+    language,
+  });
+
+  try {
     const locale = inferLocale(screen);
     const outputBaseId = screen.fileId ?? screen.id;
     const stageDir = path.join(config.meta.artifactsRoot, stage.id, phase);

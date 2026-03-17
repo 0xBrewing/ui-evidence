@@ -28,6 +28,11 @@ test('prepareGitBaseline creates and cleans a detached worktree', async () => {
         git: {
           ref: 'main~1',
           worktreeDir: 'tmp/ui-evidence/main',
+          server: {
+            command: 'npm run dev',
+            baseUrl: 'http://127.0.0.1:3100',
+            cwd: 'apps/web',
+          },
         },
       },
       capture: {
@@ -41,6 +46,7 @@ test('prepareGitBaseline creates and cleans a detached worktree', async () => {
 
     assert.match(baselineReadme, /first/);
     assert.equal(path.basename(baseline.worktreeDir), 'main');
+    assert.equal(baseline.server.cwd, path.join(baseline.worktreeDir, 'apps', 'web'));
 
     await baseline.cleanup();
 

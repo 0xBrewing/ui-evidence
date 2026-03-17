@@ -21,6 +21,18 @@
 - 안정적인 route와 wait target이 있는 로컬 웹앱
 - 현재 checkout, 실행 중인 URL, 다른 git ref 중 하나에서 `before`를 만들 수 있는 저장소
 
+## 지원하는 프로젝트 타입
+
+- 단일 패키지 Next.js 앱
+- 단일 패키지 Vite/React 앱
+- 안정적인 리뷰 route가 있는 Storybook 환경
+- URL로 열 수 있고 안정적인 selector로 기다릴 수 있는 일반 웹앱
+- `apps/*`, `packages/*` 같은 declared workspace package 아래에 앱이 있는 `pnpm`, `yarn`, `npm` workspace 기반 JavaScript monorepo
+
+현재 자동 탐지 한계:
+
+- workspace 메타데이터가 없는 임의의 nested app은 discovery 기본 대상이 아닙니다
+
 ## 설치
 
 ### 사람용 설치
@@ -31,6 +43,7 @@
 pnpm add -D github:0xBrewing/ui-evidence
 pnpm exec ui-evidence install --agent both --config ./ui-evidence.config.yaml
 pnpm exec ui-evidence doctor --config ./ui-evidence.config.yaml
+pnpm exec ui-evidence doctor --config ./ui-evidence.config.yaml --deep
 ```
 
 동등한 설치 명령:
@@ -95,7 +108,7 @@ screenshots/ui-evidence/<stage-id>/review/index.html
 1. `ui-evidence` 설치
 2. `ui-evidence install` 실행
 3. unresolved 값만 보완
-4. `ui-evidence doctor` 실행
+4. `ui-evidence doctor` 실행 후, 실제 route/wait target 검증이 필요하면 `ui-evidence doctor --deep` 실행
 5. 이후 UI 비교 요청에는 `ui-evidence run` 사용
 
 설치 후에는 사용자가 명시적으로 말해도 되고 자연어로 요청해도 됩니다.

@@ -33,7 +33,7 @@ export async function handleRun(options) {
         }
         beforeHandle = await startServer(config, 'before', {
           server: baseline.server,
-          cwd: baseline.worktreeDir,
+          cwd: baseline.server?.cwd ?? baseline.worktreeDir,
           label: 'baseline-before',
         });
       } else {
