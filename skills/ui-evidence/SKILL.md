@@ -38,6 +38,8 @@ yarn ui-evidence install --agent both --config ./ui-evidence.config.yaml
 bunx ui-evidence install --agent both --config ./ui-evidence.config.yaml
 ```
 
+That bootstrap should leave repo-local skill copies in `.agents/skills/ui-evidence/` for Codex and `.claude/skills/ui-evidence/` for Claude Code.
+
 ## Default flow
 
 1. Run `ui-evidence discover`.

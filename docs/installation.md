@@ -48,6 +48,11 @@ yarn ui-evidence install --agent both --config ./ui-evidence.config.yaml
 bunx ui-evidence install --agent both --config ./ui-evidence.config.yaml
 ```
 
+This bootstrap should leave agent-recognized local skill copies in:
+
+- `.agents/skills/ui-evidence/` for Codex and other `.agents` clients
+- `.claude/skills/ui-evidence/` for Claude Code
+
 5. Read `docs/ui-evidence-installation.md` if it was generated.
 6. Run the matching package-runner form of:
 

@@ -57,6 +57,8 @@ By convention, the skill lands in:
 
 After the skill is installed, ask the agent to use it. On first use, the skill installs the `ui-evidence` package into the current repo and runs the repo bootstrap step automatically.
 
+That bootstrap aligns with agent-native paths too. It writes repo-local skill copies to `.agents/skills/ui-evidence/` for Codex and `.claude/skills/ui-evidence/` for Claude Code, so `skills add` installs and `installation.md` bootstrap converge on recognized locations.
+
 ### First prompt after installing the skill
 
 ```text
@@ -87,6 +89,8 @@ npm install -D github:0xBrewing/ui-evidence
 yarn add -D github:0xBrewing/ui-evidence
 bun add -d github:0xBrewing/ui-evidence
 ```
+
+This direct CLI path still bootstraps the same agent-native local skill locations: `.agents/skills/ui-evidence/` and `.claude/skills/ui-evidence/`.
 
 ### For LLM setup
 

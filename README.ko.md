@@ -57,6 +57,8 @@ interactive install 을 쓰면 대상 agent, project 또는 global scope, symlin
 
 skill 설치 후에는 agent 에게 그냥 `ui-evidence`를 쓰라고 요청하면 됩니다. 첫 실행 시 skill 이 현재 repo 에 `ui-evidence` 패키지를 설치하고, repo bootstrap 단계까지 자동으로 실행합니다.
 
+이 bootstrap 도 agent-native 경로로 맞춰집니다. Codex 용 repo-local skill 은 `.agents/skills/ui-evidence/`, Claude Code 용은 `.claude/skills/ui-evidence/` 에 생성되므로 `skills add` 설치와 `installation.md` bootstrap 이 같은 인식 경로로 수렴합니다.
+
 ### Skill 설치 후 첫 요청
 
 ```text
@@ -87,6 +89,8 @@ npm install -D github:0xBrewing/ui-evidence
 yarn add -D github:0xBrewing/ui-evidence
 bun add -d github:0xBrewing/ui-evidence
 ```
+
+이 direct CLI 경로도 최종적으로는 같은 agent-native local skill 위치인 `.agents/skills/ui-evidence/` 와 `.claude/skills/ui-evidence/` 를 bootstrap 합니다.
 
 ### LLM 설치용 프롬프트
 

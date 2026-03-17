@@ -46,15 +46,19 @@ test('scaffoldConsumerRepo writes bootstrap files for Claude and Codex', async (
     const claudeCommand = await readFile(path.join(tempDir, '.claude', 'commands', 'ui-evidence.md'), 'utf8');
     const claudeNotes = await readFile(path.join(tempDir, 'CLAUDE.md'), 'utf8');
     const agentsNotes = await readFile(path.join(tempDir, 'AGENTS.md'), 'utf8');
-    const codexSkillExists = await fileExists(path.join(tempDir, 'skills', 'ui-evidence', 'SKILL.md'));
+    const codexSkillExists = await fileExists(
+      path.join(tempDir, '.agents', 'skills', 'ui-evidence', 'SKILL.md'),
+    );
+    const legacyCodexSkillExists = await fileExists(path.join(tempDir, 'skills', 'ui-evidence', 'SKILL.md'));
     const claudeSkillExists = await fileExists(path.join(tempDir, '.claude', 'skills', 'ui-evidence', 'SKILL.md'));
 
     assert.equal(configExists, true);
     assert.match(localInstallDoc, /pnpm exec ui-evidence discover --format json/);
     assert.match(claudeCommand, /docs\/ui-evidence-installation\.md/);
     assert.match(claudeNotes, /ui-evidence/);
-    assert.match(agentsNotes, /skills\/ui-evidence\//);
+    assert.match(agentsNotes, /\.agents\/skills\/ui-evidence\//);
     assert.equal(codexSkillExists, true);
+    assert.equal(legacyCodexSkillExists, false);
     assert.equal(claudeSkillExists, true);
     assert.equal(result.discovery.packageManager, 'pnpm');
   } finally {

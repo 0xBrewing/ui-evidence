@@ -136,7 +136,7 @@ function buildAgentsSection(tokens) {
   return `Use ui-evidence for UI before/after review in this repo.
 
 - If setup is missing, read \`${tokens.LOCAL_INSTALL_DOC_PATH}\` and complete the installation.
-- Prefer the local skill bundle in \`skills/ui-evidence/\` when the user asks for UI comparison, before/after screenshots, or review artifacts.
+- Prefer the local skill bundle in \`.agents/skills/ui-evidence/\` when the user asks for UI comparison, before/after screenshots, or review artifacts.
 - Use \`${tokens.UI_EVIDENCE_EXEC}\` as the deterministic engine.
 - Persist config in \`${tokens.CONFIG_PATH}\` and only create hooks when deterministic state requires them.
 - Default human-facing output is \`review/index.html\`.`;
@@ -212,7 +212,7 @@ export async function scaffoldConsumerRepo(options = {}) {
     actions.push(
       await copyDirectory(
         path.join(PACKAGE_ROOT, 'skills', 'ui-evidence'),
-        path.resolve(cwd, 'skills', 'ui-evidence'),
+        path.resolve(cwd, '.agents', 'skills', 'ui-evidence'),
         { force: options.force },
       ),
     );
