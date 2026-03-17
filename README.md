@@ -2,9 +2,9 @@
 
 [한국어 README](./README.ko.md)
 
-`ui-evidence` is a local CLI for capturing `before` and `after` UI screenshots, building side-by-side comparisons, and generating a review page a human can scan quickly.
+`ui-evidence` is a skill-first local CLI for capturing `before` and `after` UI screenshots, building side-by-side comparisons, and generating a review page a human can scan quickly.
 
-It is designed for agent-driven workflows, but the CLI stays the source of truth.
+The CLI is the deterministic engine. The skill is the first-class install surface for Codex, Claude Code, and the wider agent-skills ecosystem.
 
 ## What it does
 
@@ -12,14 +12,14 @@ It is designed for agent-driven workflows, but the CLI stays the source of truth
 - compares `before` and `after` images
 - writes a local `review/index.html`
 - supports `main` or another git ref as the `before` baseline
-- scaffolds Claude Code and Codex bootstrap files for a consumer repo
+- scaffolds repo-local bootstrap files after the skill or package is installed
 
 ## Works with
 
-- Codex CLI
-- Claude Code
-- any local web app with a stable route and wait target
-- any repo where `before` can come from the current checkout, a running URL, or another git ref
+- the open agent skills ecosystem through `SKILL.md`
+- Codex, Claude Code, and other clients that support `skills add`
+- local web apps with a stable route and wait target
+- repos where `before` can come from the current checkout, a running URL, or another git ref
 
 ## Supported project types
 
@@ -35,9 +35,43 @@ Current limit:
 
 ## Install
 
-### For humans
+### Skill-first install
 
-Install from GitHub into the app repo you want to review:
+Install the skill with the ecosystem-native installer:
+
+```bash
+pnpm dlx skills add 0xBrewing/ui-evidence
+pnpm dlx skills add 0xBrewing/ui-evidence -a codex
+pnpm dlx skills add 0xBrewing/ui-evidence -a claude-code
+pnpm dlx skills add 0xBrewing/ui-evidence -g -a codex
+```
+
+Interactive install lets the user choose the target agent, project or global scope, and symlink or copy mode.
+
+Equivalent `npx skills add ...` commands work too.
+
+By convention, the skill lands in:
+
+- `.agents/skills/` for Codex and other `.agents` clients
+- `.claude/skills/` for Claude Code
+
+After the skill is installed, ask the agent to use it. On first use, the skill installs the `ui-evidence` package into the current repo and runs the repo bootstrap step automatically.
+
+### First prompt after installing the skill
+
+```text
+Use ui-evidence to compare the checkout modal against main.
+```
+
+or:
+
+```text
+Bootstrap ui-evidence for this repo and keep the first setup minimal.
+```
+
+### Direct CLI install
+
+If you want the package without using `skills add`, install it from GitHub:
 
 ```bash
 pnpm add -D github:0xBrewing/ui-evidence
@@ -54,22 +88,14 @@ yarn add -D github:0xBrewing/ui-evidence
 bun add -d github:0xBrewing/ui-evidence
 ```
 
-If you want to work on `ui-evidence` itself:
-
-```bash
-git clone https://github.com/0xBrewing/ui-evidence.git
-cd ui-evidence
-pnpm install
-pnpm test
-```
-
 ### For LLM setup
 
-If you are in Codex CLI or Claude Code, give the agent this prompt:
+If you want to hand an installation playbook to an LLM directly:
 
 ```text
 Read https://raw.githubusercontent.com/0xBrewing/ui-evidence/main/docs/installation.md
 and set up ui-evidence for this repository.
+Prefer the installed ui-evidence skill if it is already available.
 Keep the first setup minimal and ask only about unresolved route, wait target, auth, or baseline details.
 ```
 
@@ -101,20 +127,29 @@ screenshots/ui-evidence/<stage-id>/review/index.html
 
 ## Use with Codex or Claude Code
 
-`ui-evidence` works best when the agent uses the CLI instead of improvising browser steps.
-
 The intended flow is:
 
-1. install `ui-evidence`
-2. run `ui-evidence install`
-3. fix only unresolved config values
-4. run `ui-evidence doctor`, then `ui-evidence doctor --deep` when you want an actual route and wait-target check
-5. use `ui-evidence run` for later UI comparison requests
+1. install the skill with `skills add`
+2. ask the agent to use `ui-evidence`
+3. let the skill install the CLI package and run `ui-evidence install`
+4. fix only unresolved config values
+5. run `ui-evidence doctor`, then `ui-evidence doctor --deep` when you want an actual route and wait-target check
+6. use `ui-evidence run` for later UI comparison requests
 
-After setup, users can ask for UI comparison either explicitly or in plain language:
+After bootstrap, users can ask for UI comparison either explicitly or in plain language:
 
 - `Use ui-evidence to compare the checkout modal against main`
 - `Capture before and after screenshots for the login screen`
+
+## Open skill bundle
+
+This repo ships the standard pieces expected by the open skills ecosystem:
+
+- [`skills/ui-evidence/SKILL.md`](./skills/ui-evidence/SKILL.md)
+- [`skills/ui-evidence/agents/openai.yaml`](./skills/ui-evidence/agents/openai.yaml)
+- [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json)
+
+The Claude plugin mirror under [`plugins/ui-evidence/`](./plugins/ui-evidence) is generated from the canonical skill source.
 
 ## Minimal config shape
 
@@ -178,7 +213,7 @@ screenshots/ui-evidence/<stage-id>/
 
 Issues and pull requests are welcome.
 
-If you want to improve setup UX, agent bootstrap, or HTML review output, start with:
+If you want to improve setup UX, skill metadata, or HTML review output, start with:
 
 - [README.md](./README.md)
 - [docs/installation.md](./docs/installation.md)

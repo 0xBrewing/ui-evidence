@@ -2,42 +2,76 @@
 
 [English README](./README.md)
 
-`ui-evidence`는 `before`/`after` UI 스크린샷을 캡처하고, 나란히 비교 이미지를 만들고, 사람이 빠르게 확인할 수 있는 리뷰 페이지를 생성하는 로컬 CLI입니다.
+`ui-evidence`는 수정 전후 UI 스크린샷을 캡처하고, 나란히 비교 이미지를 만들고, 사람이 빠르게 검토할 수 있는 `review/index.html`을 생성하는 skill-first 로컬 CLI입니다.
 
-에이전트 친화적으로 설계했지만, 실제 엔진은 항상 CLI입니다.
+결정적인 실행 엔진은 CLI이고, Codex, Claude Code, 그리고 open agent skills 생태계에서의 1급 설치 표면은 skill입니다.
 
 ## 하는 일
 
-- Playwright로 안정적인 UI 화면 캡처
-- `before` / `after` 이미지 비교
-- 로컬 `review/index.html` 생성
-- `main` 같은 git ref를 `before` 기준으로 사용
-- consumer repo용 Claude Code / Codex bootstrap 파일 생성
+- Playwright로 안정적인 UI 화면을 캡처합니다
+- `before` 와 `after` 이미지를 비교합니다
+- 로컬 `review/index.html`을 생성합니다
+- `main` 또는 다른 git ref를 `before` 기준으로 사용할 수 있습니다
+- skill 또는 패키지 설치 후 repo-local bootstrap 파일을 생성합니다
 
 ## 함께 쓰기 좋은 환경
 
-- Codex CLI
-- Claude Code
-- 안정적인 route와 wait target이 있는 로컬 웹앱
-- 현재 checkout, 실행 중인 URL, 다른 git ref 중 하나에서 `before`를 만들 수 있는 저장소
+- `SKILL.md` 기반 open agent skills 생태계
+- `skills add` 를 지원하는 Codex, Claude Code, 기타 클라이언트
+- 안정적인 route 와 wait target 이 있는 로컬 웹앱
+- `before` 기준을 현재 체크아웃, 실행 중인 URL, 또는 다른 git ref에서 가져올 수 있는 repo
 
 ## 지원하는 프로젝트 타입
 
 - 단일 패키지 Next.js 앱
 - 단일 패키지 Vite/React 앱
-- 안정적인 리뷰 route가 있는 Storybook 환경
-- URL로 열 수 있고 안정적인 selector로 기다릴 수 있는 일반 웹앱
-- `apps/*`, `packages/*` 같은 declared workspace package 아래에 앱이 있는 `pnpm`, `yarn`, `npm` workspace 기반 JavaScript monorepo
+- 안정적인 review route 가 있는 Storybook
+- URL로 열고 안정적인 selector로 대기할 수 있는 일반 웹앱
+- 리뷰 대상 앱이 `apps/*`, `packages/*` 같은 declared workspace package 아래 있는 `pnpm`, `yarn`, `npm` workspaces 기반 JavaScript 모노레포
 
-현재 자동 탐지 한계:
+현재 한계:
 
-- workspace 메타데이터가 없는 임의의 nested app은 discovery 기본 대상이 아닙니다
+- workspace 메타데이터가 없는 임의 nested app 은 아직 자동 discovery 대상이 아닙니다
 
 ## 설치
 
-### 사람용 설치
+### Skill-first 설치
 
-리뷰하려는 앱 저장소에 GitHub 기준으로 설치:
+생태계 표준 installer 로 skill부터 설치합니다.
+
+```bash
+pnpm dlx skills add 0xBrewing/ui-evidence
+pnpm dlx skills add 0xBrewing/ui-evidence -a codex
+pnpm dlx skills add 0xBrewing/ui-evidence -a claude-code
+pnpm dlx skills add 0xBrewing/ui-evidence -g -a codex
+```
+
+interactive install 을 쓰면 대상 agent, project 또는 global scope, symlink 또는 copy 방식을 사용자가 고를 수 있습니다.
+
+같은 의미의 `npx skills add ...` 명령을 써도 됩니다.
+
+관례상 설치 위치는 다음과 같습니다.
+
+- Codex 와 다른 `.agents` 계열 클라이언트는 `.agents/skills/`
+- Claude Code 는 `.claude/skills/`
+
+skill 설치 후에는 agent 에게 그냥 `ui-evidence`를 쓰라고 요청하면 됩니다. 첫 실행 시 skill 이 현재 repo 에 `ui-evidence` 패키지를 설치하고, repo bootstrap 단계까지 자동으로 실행합니다.
+
+### Skill 설치 후 첫 요청
+
+```text
+Use ui-evidence to compare the checkout modal against main.
+```
+
+또는:
+
+```text
+Bootstrap ui-evidence for this repo and keep the first setup minimal.
+```
+
+### Direct CLI 설치
+
+`skills add` 없이 패키지만 바로 쓰고 싶다면 GitHub에서 설치하면 됩니다.
 
 ```bash
 pnpm add -D github:0xBrewing/ui-evidence
@@ -54,26 +88,18 @@ yarn add -D github:0xBrewing/ui-evidence
 bun add -d github:0xBrewing/ui-evidence
 ```
 
-`ui-evidence` 자체를 개발하려면:
+### LLM 설치용 프롬프트
 
-```bash
-git clone https://github.com/0xBrewing/ui-evidence.git
-cd ui-evidence
-pnpm install
-pnpm test
-```
-
-### LLM 설치용
-
-Codex CLI나 Claude Code 안에서는 아래 프롬프트를 그대로 주면 됩니다.
+LLM 에게 설치 플레이북을 직접 전달하고 싶다면 이렇게 요청하면 됩니다.
 
 ```text
 Read https://raw.githubusercontent.com/0xBrewing/ui-evidence/main/docs/installation.md
 and set up ui-evidence for this repository.
+Prefer the installed ui-evidence skill if it is already available.
 Keep the first setup minimal and ask only about unresolved route, wait target, auth, or baseline details.
 ```
 
-이미 repo 안에 `ui-evidence`가 설치되어 있다면 아래처럼 요청해도 됩니다.
+repo 안에 `ui-evidence`가 이미 설치돼 있다면 이것도 가능합니다.
 
 ```text
 Read node_modules/ui-evidence/docs/installation.md and set up ui-evidence for this repository.
@@ -87,34 +113,43 @@ Read node_modules/ui-evidence/docs/installation.md and set up ui-evidence for th
 pnpm exec ui-evidence run --config ./ui-evidence.config.yaml --stage primary-flow
 ```
 
-현재 브랜치를 `main`과 비교:
+현재 브랜치를 `main` 과 비교:
 
 ```bash
 pnpm exec ui-evidence run --config ./ui-evidence.config.yaml --stage primary-flow --before-ref main
 ```
 
-결과 확인:
+열어볼 경로:
 
 ```text
 screenshots/ui-evidence/<stage-id>/review/index.html
 ```
 
-## Codex 또는 Claude Code와 함께 쓰기
+## Codex 또는 Claude Code 에서 쓰는 흐름
 
-`ui-evidence`는 에이전트가 브라우저를 즉흥적으로 조작하는 대신 CLI를 호출할 때 가장 안정적으로 동작합니다.
+의도한 흐름은 아래와 같습니다.
 
-기본 흐름은 아래와 같습니다.
+1. `skills add` 로 skill 설치
+2. agent 에게 `ui-evidence` 를 쓰라고 요청
+3. skill 이 CLI 패키지를 설치하고 `ui-evidence install` 실행
+4. unresolved config 값만 보정
+5. 실제 route 와 wait target 검증이 필요하면 `ui-evidence doctor`, `ui-evidence doctor --deep` 실행
+6. 이후 UI 비교 요청에는 `ui-evidence run` 사용
 
-1. `ui-evidence` 설치
-2. `ui-evidence install` 실행
-3. unresolved 값만 보완
-4. `ui-evidence doctor` 실행 후, 실제 route/wait target 검증이 필요하면 `ui-evidence doctor --deep` 실행
-5. 이후 UI 비교 요청에는 `ui-evidence run` 사용
+bootstrap 이후에는 명시적 요청과 자연어 요청 둘 다 가능합니다.
 
-설치 후에는 사용자가 명시적으로 말해도 되고 자연어로 요청해도 됩니다.
+- `Use ui-evidence to compare the checkout modal against main`
+- `Capture before and after screenshots for the login screen`
 
-- `ui-evidence로 checkout modal을 main 기준으로 비교해줘`
-- `로그인 화면 수정 전후 캡처해줘`
+## Open skill bundle
+
+이 repo 는 open skills 생태계에서 기대하는 표준 파일을 함께 제공합니다.
+
+- [`skills/ui-evidence/SKILL.md`](./skills/ui-evidence/SKILL.md)
+- [`skills/ui-evidence/agents/openai.yaml`](./skills/ui-evidence/agents/openai.yaml)
+- [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json)
+
+[`plugins/ui-evidence/`](./plugins/ui-evidence) 아래 Claude plugin mirror 는 canonical skill source 에서 생성됩니다.
 
 ## 최소 config 형태
 
@@ -150,9 +185,9 @@ stages:
           testId: screen-home
 ```
 
-## 결과물
+## 출력물
 
-각 stage는 아래 구조로 산출물을 남깁니다.
+각 stage 는 아래를 생성합니다.
 
 ```text
 screenshots/ui-evidence/<stage-id>/
@@ -168,22 +203,21 @@ screenshots/ui-evidence/<stage-id>/
   manifest.json
 ```
 
-## 먼저 볼 파일
+## 먼저 읽어볼 파일
 
 - [docs/installation.md](./docs/installation.md)
 - [examples/generic-web/ui-evidence.config.yaml](./examples/generic-web/ui-evidence.config.yaml)
 - [skills/ui-evidence/SKILL.md](./skills/ui-evidence/SKILL.md)
 
-## 기여하기
+## 기여
 
-Issue와 PR 모두 환영합니다.
+issue 와 pull request 는 언제든 환영합니다.
 
-특히 아래 영역은 오픈소스 기여 가치가 큽니다.
+설치 UX, skill 메타데이터, HTML review 출력을 개선하려면 여기부터 보는 것이 좋습니다.
 
-- 설치 UX
-- agent bootstrap
-- HTML review 출력
-- framework preset 확장
+- [README.md](./README.md)
+- [docs/installation.md](./docs/installation.md)
+- [skills/ui-evidence/SKILL.md](./skills/ui-evidence/SKILL.md)
 
 ## 라이선스
 

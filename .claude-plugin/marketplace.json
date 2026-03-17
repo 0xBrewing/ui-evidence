@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "ui-evidence",
+      "source": "ui-evidence",
+      "skills": [
+        "./skills/ui-evidence"
+      ]
+    }
+  ]
+}

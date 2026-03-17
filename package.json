@@ -1,12 +1,13 @@
 {
   "name": "ui-evidence",
   "version": "0.1.0",
-  "description": "LLM-first UI before/after screenshot capture, comparison, and Markdown evidence pipeline.",
+  "description": "Skill-first UI before/after screenshot capture, comparison, and review pipeline for Codex, Claude Code, and the open agent skills ecosystem.",
   "type": "module",
   "bin": {
     "ui-evidence": "./bin/ui-evidence.mjs"
   },
   "files": [
+    ".claude-plugin",
     "LICENSE",
     "README.md",
     "README.ko.md",
@@ -17,6 +18,7 @@
     "examples/next-playwright/ui-evidence.config.yaml",
     "examples/storybook/ui-evidence.config.yaml",
     "examples/vite-react/ui-evidence.config.yaml",
+    "plugins",
     "schemas",
     "skills",
     "src",
@@ -29,6 +31,7 @@
   "scripts": {
     "schema:print": "node ./bin/ui-evidence.mjs schema --print",
     "help": "node ./bin/ui-evidence.mjs help",
+    "sync:skill-mirrors": "node ./scripts/sync-skill-mirror.mjs",
     "test": "node --test"
   },
   "keywords": [
@@ -37,7 +40,11 @@
     "visual-regression",
     "screenshots",
     "ui-review",
-    "agent-skill"
+    "agent-skill",
+    "skills",
+    "skillsmp",
+    "claude-code",
+    "codex"
   ],
   "license": "MIT",
   "dependencies": {
