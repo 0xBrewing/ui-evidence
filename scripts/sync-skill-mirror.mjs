@@ -5,8 +5,21 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
-const sourceDir = path.join(repoRoot, 'skills', 'ui-evidence');
-const mirrorDir = path.join(repoRoot, 'plugins', 'ui-evidence', 'skills', 'ui-evidence');
+
+function readArg(flag) {
+  const index = process.argv.indexOf(flag);
+  if (index === -1) {
+    return null;
+  }
+
+  return process.argv[index + 1] ?? null;
+}
+
+const sourceDir = path.resolve(repoRoot, readArg('--source') ?? path.join('skills', 'ui-evidence'));
+const mirrorDir = path.resolve(
+  repoRoot,
+  readArg('--mirror') ?? path.join('plugins', 'ui-evidence', 'skills', 'ui-evidence'),
+);
 
 async function listFiles(directory, prefix = '') {
   const entries = await readdir(directory, { withFileTypes: true });

@@ -1,4 +1,0 @@
-version: 1
-display_name: UI Evidence
-short_description: Bootstrap ui-evidence in a repo, capture before/after UI states, and generate a local review surface plus evidence artifacts.
-default_prompt: Install or bootstrap ui-evidence if needed, configure the repo, run the evidence workflow, and summarize the review artifacts for this repo.

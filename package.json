@@ -29,6 +29,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "prepare": "node ./scripts/sync-skill-mirror.mjs",
     "schema:print": "node ./bin/ui-evidence.mjs schema --print",
     "help": "node ./bin/ui-evidence.mjs help",
     "sync:skill-mirrors": "node ./scripts/sync-skill-mirror.mjs",

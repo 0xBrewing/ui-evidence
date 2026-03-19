@@ -153,7 +153,7 @@ bootstrap 이후에는 명시적 요청과 자연어 요청 둘 다 가능합니
 - [`skills/ui-evidence/agents/openai.yaml`](./skills/ui-evidence/agents/openai.yaml)
 - [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json)
 
-[`plugins/ui-evidence/`](./plugins/ui-evidence) 아래 Claude plugin mirror 는 canonical skill source 에서 생성됩니다.
+Claude plugin mirror 는 `prepare` 단계에서 canonical skill source 로부터 `plugins/ui-evidence/` 아래에 생성되고, marketplace 인덱싱이 canonical skill path 하나만 보도록 의도적으로 커밋하지 않습니다.
 
 ## 최소 config 형태
 

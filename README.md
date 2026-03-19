@@ -153,7 +153,7 @@ This repo ships the standard pieces expected by the open skills ecosystem:
 - [`skills/ui-evidence/agents/openai.yaml`](./skills/ui-evidence/agents/openai.yaml)
 - [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json)
 
-The Claude plugin mirror under [`plugins/ui-evidence/`](./plugins/ui-evidence) is generated from the canonical skill source.
+The Claude plugin mirror is generated into `plugins/ui-evidence/` from the canonical skill source during `prepare`, and is intentionally not committed so marketplace indexing sees only the canonical skill path.
 
 ## Minimal config shape
 
