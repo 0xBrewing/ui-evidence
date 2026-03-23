@@ -56,6 +56,53 @@ export function runCommand(command, options = {}) {
   });
 }
 
+export function runCommandArgs(file, args = [], options = {}) {
+  const {
+    cwd,
+    env,
+    label,
+    input = null,
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(file, args, {
+      cwd,
+      env: {
+        ...process.env,
+        ...env,
+      },
+      shell: false,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    pipeChildOutput(child, label);
+
+    let stdout = '';
+    let stderr = '';
+    child.stdout?.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr?.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on('error', reject);
+    child.on('exit', (code) => {
+      if (code === 0) {
+        resolve({ code, stdout, stderr });
+        return;
+      }
+      const description = [file, ...args].join(' ');
+      reject(new Error(`Command failed (${code}): ${description}\n${stderr || stdout}`.trim()));
+    });
+
+    if (input) {
+      child.stdin?.write(input);
+    }
+    child.stdin?.end();
+  });
+}
+
 export function spawnCommand(command, options = {}) {
   const { cwd, env, label } = options;
   const child = spawn(command, {

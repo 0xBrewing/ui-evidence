@@ -76,16 +76,10 @@ After the skill is installed, ask the agent to use it. On first use, the skill i
 
 That bootstrap aligns with agent-native paths too. It writes repo-local skill copies to `.agents/skills/ui-evidence/` for Codex and `.claude/skills/ui-evidence/` for Claude Code, so `skills add` installs and `installation.md` bootstrap converge on recognized locations.
 
-### First prompt after installing the skill
+Shortest prompt after install:
 
 ```text
 Use ui-evidence to compare the checkout modal against main.
-```
-
-or:
-
-```text
-Bootstrap ui-evidence for this repo and keep the first setup minimal.
 ```
 
 ### Direct CLI install
@@ -146,21 +140,11 @@ Open:
 screenshots/ui-evidence/<stage-id>/review/index.html
 ```
 
-## Use with Codex or Claude Code
-
-The intended flow is:
-
-1. install the skill with `skills add`
-2. ask the agent to use `ui-evidence`
-3. let the skill install the CLI package and run `ui-evidence install`
-4. fix only unresolved config values
-5. run `ui-evidence doctor`, then `ui-evidence doctor --deep` when you want an actual route and wait-target check
-6. use `ui-evidence run` for later UI comparison requests
-
-After bootstrap, users can ask for UI comparison either explicitly or in plain language:
+## Common prompts
 
 - `Use ui-evidence to compare the checkout modal against main`
 - `Capture before and after screenshots for the login screen`
+- `Bootstrap ui-evidence for this repo and keep the first setup minimal`
 
 ## Open skill bundle
 
@@ -179,6 +163,8 @@ version: 1
 project:
   name: my-app
   rootDir: .
+artifacts:
+  rootDir: screenshots/ui-evidence
 capture:
   baseUrl: http://127.0.0.1:3000
   browser:
@@ -196,6 +182,7 @@ servers:
 stages:
   - id: primary-flow
     title: Primary Flow
+    description: Stable UI surface for before/after review.
     defaultViewports:
       - mobile-390
     screens:

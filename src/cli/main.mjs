@@ -146,26 +146,27 @@ const commandHandlers = {
 
 export async function main(argv) {
   const { command, options, positionals } = parseArgv(argv);
-  if (!command || command === 'help' || command === '--help' || command === '-h') {
-    if (command === 'help' && positionals[0]) {
-      printCommandHelp(positionals[0]);
-      return;
-    }
-    printTopHelp();
-    return;
-  }
-
-  const handler = commandHandlers[command];
-  if (!handler) {
-    throw new Error(`Unknown command "${command}". Use "ui-evidence help".`);
-  }
-
-  if (options.help) {
-    printCommandHelp(command);
-    return;
-  }
 
   try {
+    if (!command || command === 'help' || command === '--help' || command === '-h') {
+      if (command === 'help' && positionals[0]) {
+        printCommandHelp(positionals[0]);
+        return;
+      }
+      printTopHelp();
+      return;
+    }
+
+    const handler = commandHandlers[command];
+    if (!handler) {
+      throw new Error(`Unknown command "${command}". Use "ui-evidence help".`);
+    }
+
+    if (options.help) {
+      printCommandHelp(command);
+      return;
+    }
+
     await handler(options);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

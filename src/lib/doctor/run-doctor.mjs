@@ -200,8 +200,14 @@ export async function runDoctor(options = {}) {
         : `Baseline ref ${baseline.ref} was not found.`,
     ));
 
-    if (baseline.server?.command && baseline.server?.baseUrl) {
-      checks.push(makeCheck('baseline-server', 'pass', `Baseline server will use ${baseline.server.command}`));
+    if (baseline.server?.baseUrl) {
+      checks.push(makeCheck(
+        'baseline-server',
+        'pass',
+        baseline.server.command
+          ? `Baseline server will use ${baseline.server.command}`
+          : `Baseline server will reuse ${baseline.server.baseUrl}`,
+      ));
     } else {
       checks.push(makeCheck(
         'baseline-server',
@@ -225,15 +231,15 @@ export async function runDoctor(options = {}) {
       language,
     });
 
-    if (options.beforeRef) {
+    if (baseline) {
       let preparedBaseline = null;
       try {
-        preparedBaseline = await prepareGitBaseline(config, options.beforeRef);
+        preparedBaseline = await prepareGitBaseline(config, baseline.ref);
         if (!preparedBaseline?.server?.baseUrl) {
           checks.push(makeCheck(
             'deep:before:server',
             'fail',
-            `Baseline ref "${options.beforeRef}" does not provide a reusable baseUrl for deep validation.`,
+            `Baseline ref "${baseline.ref}" does not provide a reusable baseUrl for deep validation.`,
           ));
         } else {
           await runDeepPhaseValidation({
@@ -248,7 +254,7 @@ export async function runDoctor(options = {}) {
               cwd: preparedBaseline.server.cwd ?? preparedBaseline.worktreeDir,
               label: 'baseline-before',
             },
-            serverLabel: `baseline ref ${options.beforeRef}`,
+            serverLabel: `baseline ref ${baseline.ref}`,
             language,
           });
         }

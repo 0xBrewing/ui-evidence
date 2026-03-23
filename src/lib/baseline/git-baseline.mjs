@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { resolveProjectPath } from '../../config/load-config.mjs';
 import { ensureDir, removeDir } from '../util/fs.mjs';
-import { runCommand, runCommandSync } from '../util/process.mjs';
+import { runCommand, runCommandArgs, runCommandSync } from '../util/process.mjs';
 
 function slugifyRef(ref) {
   return String(ref)
@@ -44,7 +44,7 @@ function directoryExistsSync(dirPath) {
 
 function buildResolvedServer(config) {
   const baselineServer = config.baseline?.git?.server;
-  if (baselineServer?.command && baselineServer.baseUrl) {
+  if (baselineServer?.baseUrl) {
     return baselineServer;
   }
 
@@ -106,7 +106,7 @@ export async function prepareGitBaseline(config, beforeRefOverride) {
 
   await ensureDir(path.dirname(baseline.worktreeDir));
   await removeDir(baseline.worktreeDir);
-  await runCommand(`git worktree add --detach "${baseline.worktreeDir}" "${baseline.ref}"`, {
+  await runCommandArgs('git', ['worktree', 'add', '--detach', baseline.worktreeDir, baseline.ref], {
     cwd: config.meta.projectRoot,
     label: 'baseline',
   });
@@ -125,7 +125,7 @@ export async function prepareGitBaseline(config, beforeRefOverride) {
     ...baseline,
     server: resolvedServer,
     cleanup: async () => {
-      await runCommand(`git worktree remove --force "${baseline.worktreeDir}"`, {
+      await runCommandArgs('git', ['worktree', 'remove', '--force', baseline.worktreeDir], {
         cwd: config.meta.projectRoot,
       }).catch(async () => {
         await removeDir(baseline.worktreeDir);

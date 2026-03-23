@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { runCommand } from '../src/lib/util/process.mjs';
 
@@ -30,4 +31,24 @@ test('command-specific help is available through help <command>', async () => {
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
+});
+
+test('unknown commands print a friendly error without a stack trace', () => {
+  const result = spawnSync(process.execPath, [BIN_PATH, 'nonsense'], {
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Unknown command "nonsense"/);
+  assert.doesNotMatch(result.stderr, /at main|Node\.js v|file:\/\//);
+});
+
+test('help for an unknown command prints a friendly error without a stack trace', () => {
+  const result = spawnSync(process.execPath, [BIN_PATH, 'help', 'nonsense'], {
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Unknown command "nonsense"/);
+  assert.doesNotMatch(result.stderr, /at main|Node\.js v|file:\/\//);
 });

@@ -26,11 +26,6 @@ export async function handleRun(options) {
         if (!baseline.server?.baseUrl) {
           throw new Error(`Baseline ref "${beforeRef}" is configured but no baseline server baseUrl is available.`);
         }
-        if (!options.beforeBaseUrl && !baseline.server.command) {
-          throw new Error(
-            `Baseline ref "${beforeRef}" requires either baseline.git.server.command or --before-base-url.`,
-          );
-        }
         beforeHandle = await startServer(config, 'before', {
           server: baseline.server,
           cwd: baseline.server?.cwd ?? baseline.worktreeDir,

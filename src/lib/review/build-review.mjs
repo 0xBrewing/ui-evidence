@@ -39,14 +39,32 @@ function buildReviewData(config, stage, manifest, stagePaths) {
   };
 }
 
+function serializeForInlineScript(value) {
+  return JSON.stringify(value)
+    .replaceAll('&', '\\u0026')
+    .replaceAll('<', '\\u003c')
+    .replaceAll('>', '\\u003e')
+    .replaceAll('\u2028', '\\u2028')
+    .replaceAll('\u2029', '\\u2029');
+}
+
+function escapeHtmlValue(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function renderReviewHtml(reviewData) {
-  const serialized = JSON.stringify(reviewData);
+  const serialized = serializeForInlineScript(reviewData);
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${reviewData.stage.title} Review</title>
+    <title>${escapeHtmlValue(reviewData.stage.title)} Review</title>
     <style>
       :root {
         --bg: #f3ede4;

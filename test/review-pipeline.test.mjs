@@ -93,3 +93,86 @@ test('compare, report, and review generate human-facing artifacts', async () => 
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('review HTML escapes inline JSON payload before embedding it in a script tag', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-review-escape-'));
+
+  try {
+    await writeFile(
+      path.join(tempDir, 'ui-evidence.config.yaml'),
+      `version: 1
+project:
+  name: smoke-app
+  rootDir: .
+artifacts:
+  rootDir: screenshots/ui-evidence
+  notesLanguage: en
+  reportLanguage: en
+  overviewViewport: mobile-390
+capture:
+  baseUrl: http://127.0.0.1:3000
+  browser:
+    headless: true
+    freezeAnimations: true
+    waitForFonts: true
+    waitForNetworkIdleMs: 2000
+  viewports:
+    - id: mobile-390
+      viewport:
+        width: 390
+        height: 844
+      locale: en-US
+      timezoneId: UTC
+stages:
+  - id: landing
+    title: Landing </script><script>globalThis.__x = 1</script>
+    description: Safe < unsafe
+    defaultViewports:
+      - mobile-390
+    screens:
+      - id: hero
+        fileId: hero
+        label: Hero
+        path: /
+        waitFor:
+          selector: body
+`,
+      'utf8',
+    );
+    const beforeDir = path.join(tempDir, 'screenshots', 'ui-evidence', 'landing', 'before');
+    const afterDir = path.join(tempDir, 'screenshots', 'ui-evidence', 'landing', 'after');
+    await mkdir(beforeDir, { recursive: true });
+    await mkdir(afterDir, { recursive: true });
+
+    await sharp({
+      create: {
+        width: 200,
+        height: 160,
+        channels: 4,
+        background: '#efddc8',
+      },
+    }).png().toFile(path.join(beforeDir, 'hero__default__mobile-390__before.png'));
+
+    await sharp({
+      create: {
+        width: 200,
+        height: 160,
+        channels: 4,
+        background: '#c9d9f8',
+      },
+    }).png().toFile(path.join(afterDir, 'hero__default__mobile-390__after.png'));
+
+    const config = await loadConfig(path.join(tempDir, 'ui-evidence.config.yaml'));
+    await buildComparisons({ config, stageArg: 'landing', language: 'en' });
+    await generateReports({ config, stageArg: 'landing', language: 'en' });
+    await buildReviewPages({ config, stageArg: 'landing', language: 'en' });
+
+    const reviewHtml = await readFile(path.join(tempDir, 'screenshots', 'ui-evidence', 'landing', 'review', 'index.html'), 'utf8');
+
+    assert.doesNotMatch(reviewHtml, /<\/script><script>globalThis\.__x = 1<\/script>/);
+    assert.match(reviewHtml, /\\u003c\/script\\u003e\\u003cscript\\u003eglobalThis\.__x = 1\\u003c\/script\\u003e/);
+    assert.match(reviewHtml, /Safe \\u003c unsafe/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});

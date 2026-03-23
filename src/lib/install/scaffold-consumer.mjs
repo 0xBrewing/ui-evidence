@@ -109,19 +109,6 @@ function buildPackageExec(packageManager) {
   return 'npx ui-evidence';
 }
 
-function buildInstallCommand(packageManager) {
-  if (packageManager === 'pnpm') {
-    return 'pnpm add -D ui-evidence';
-  }
-  if (packageManager === 'yarn') {
-    return 'yarn add -D ui-evidence';
-  }
-  if (packageManager === 'bun') {
-    return 'bun add -d ui-evidence';
-  }
-  return 'npm install -D ui-evidence';
-}
-
 function buildClaudeSection(tokens) {
   return `Use ui-evidence for before/after UI review in this repo.
 
@@ -150,7 +137,6 @@ export async function scaffoldConsumerRepo(options = {}) {
   const discovery = await discoverProject({ cwd });
   const tokens = {
     UI_EVIDENCE_EXEC: buildPackageExec(discovery.packageManager),
-    UI_EVIDENCE_INSTALL_COMMAND: buildInstallCommand(discovery.packageManager),
     CONFIG_PATH: toPosixPath(path.relative(cwd, configPath)),
     LOCAL_INSTALL_DOC_PATH: toPosixPath(path.relative(cwd, installDocPath)),
   };
