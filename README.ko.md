@@ -14,6 +14,23 @@
 - `main` 또는 다른 git ref를 `before` 기준으로 사용할 수 있습니다
 - skill 또는 패키지 설치 후 repo-local bootstrap 파일을 생성합니다
 
+## 실제 결과물
+
+### Archive ledger mobile 버튼 리프레시
+
+이 showcase는 버튼 디자인 시스템 적용 전후를 실제 모바일 archive 흐름에서 비교한 예시입니다. 한 번의 실행으로 4개 화면의 before/after 캡처, pair 비교 이미지, overview, review HTML까지 함께 확인할 수 있습니다.
+
+![Archive ledger mobile overview](./docs/showcase/archive-ledger-mobile/comparison/overview/archive-ledger-mobile__mobile-390__overview.png)
+
+산출물:
+
+- [before 캡처](./docs/showcase/archive-ledger-mobile/before/)
+- [after 캡처](./docs/showcase/archive-ledger-mobile/after/)
+- [pair 비교 이미지](./docs/showcase/archive-ledger-mobile/comparison/pairs/)
+- [overview 이미지](./docs/showcase/archive-ledger-mobile/comparison/overview/archive-ledger-mobile__mobile-390__overview.png)
+- [review HTML 로컬 열기](./docs/showcase/archive-ledger-mobile/review/index.html)
+- [보고서](./docs/showcase/archive-ledger-mobile/report.ko.md)
+
 ## 함께 쓰기 좋은 환경
 
 - `SKILL.md` 기반 open agent skills 생태계

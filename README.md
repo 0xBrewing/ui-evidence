@@ -14,6 +14,23 @@ The CLI is the deterministic engine. The skill is the first-class install surfac
 - supports `main` or another git ref as the `before` baseline
 - scaffolds repo-local bootstrap files after the skill or package is installed
 
+## Real output
+
+### Archive ledger mobile button refresh
+
+This showcase captures a real mobile archive flow before and after a button design-system rollout. One run covers four screens, builds pair comparisons, and produces a review surface a human can scan quickly.
+
+![Archive ledger mobile overview](./docs/showcase/archive-ledger-mobile/comparison/overview/archive-ledger-mobile__mobile-390__overview.png)
+
+Artifacts:
+
+- [before captures](./docs/showcase/archive-ledger-mobile/before/)
+- [after captures](./docs/showcase/archive-ledger-mobile/after/)
+- [pair comparisons](./docs/showcase/archive-ledger-mobile/comparison/pairs/)
+- [overview image](./docs/showcase/archive-ledger-mobile/comparison/overview/archive-ledger-mobile__mobile-390__overview.png)
+- [review HTML (open locally)](./docs/showcase/archive-ledger-mobile/review/index.html)
+- [manifest](./docs/showcase/archive-ledger-mobile/manifest.json)
+
 ## Works with
 
 - the open agent skills ecosystem through `SKILL.md`
