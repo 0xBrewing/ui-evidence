@@ -2,9 +2,9 @@
 
 [English README](./README.md)
 
-`ui-evidence`는 수정 전후 UI 스크린샷을 캡처하고, 나란히 비교 이미지를 만들고, 사람이 빠르게 검토할 수 있는 `review/index.html`을 생성하는 skill-first 로컬 CLI입니다.
+`ui-evidence`는 agent가 바꾼 UI를 사람이 빠르게 검토할 수 있게 해주는 로컬 before/after evidence 도구입니다. 안정적인 스크린샷을 캡처하고, 나란히 비교 이미지를 만들고, 빠르게 훑어볼 수 있는 `review/index.html`을 생성합니다.
 
-결정적인 실행 엔진은 CLI이고, Codex, Claude Code, 그리고 open agent skills 생태계에서의 1급 설치 표면은 skill입니다.
+AI 코딩 도구가 프런트엔드 작업 중 엉뚱한 UI까지 건드리거나, 바뀌어야 할 화면을 조용히 빼먹는 경우가 있어서 만들었습니다. 실제 디자인 시스템 적용 작업에 써보니, 누락된 화면과 어긋난 버튼 수정 여부를 빠르게 확인하는 데 바로 도움이 됐습니다.
 
 ## 하는 일
 
@@ -13,6 +13,8 @@
 - 로컬 `review/index.html`을 생성합니다
 - `main` 또는 다른 git ref를 `before` 기준으로 사용할 수 있습니다
 - skill 또는 패키지 설치 후 repo-local bootstrap 파일을 생성합니다
+
+패키지는 로컬 CLI이고, skill은 Codex, Claude Code, 그리고 `SKILL.md` 기반 클라이언트에서 가장 자연스러운 설치 표면입니다.
 
 ## 실제 결과물
 

@@ -2,9 +2,9 @@
 
 [한국어 README](./README.ko.md)
 
-`ui-evidence` is a skill-first local CLI for capturing `before` and `after` UI screenshots, building side-by-side comparisons, and generating a review page a human can scan quickly.
+`ui-evidence` is local before/after UI evidence for agent-driven changes. It captures stable screenshots, builds side-by-side comparisons, and generates a review page a human can scan quickly.
 
-The CLI is the deterministic engine. The skill is the first-class install surface for Codex, Claude Code, and the wider agent-skills ecosystem.
+I built it after AI coding tools started changing the wrong UI or quietly skipping screens during frontend work. It became useful immediately in a real design-system rollout because missing screens and inconsistent button updates were easy to spot.
 
 ## What it does
 
@@ -13,6 +13,8 @@ The CLI is the deterministic engine. The skill is the first-class install surfac
 - writes a local `review/index.html`
 - supports `main` or another git ref as the `before` baseline
 - scaffolds repo-local bootstrap files after the skill or package is installed
+
+The package is the local CLI. The skill is the easiest install surface for Codex, Claude Code, and other `SKILL.md`-based clients.
 
 ## Real output
 
