@@ -1,5 +1,6 @@
 import path from 'node:path';
-import { ensureDir, fileExists, listFiles, toPosixPath, writeJson } from './fs.mjs';
+import { readdir } from 'node:fs/promises';
+import { directoryExists, ensureDir, fileExists, listFiles, readJson, toPosixPath, writeJson } from './fs.mjs';
 import { writeFile } from 'node:fs/promises';
 import { inferLocale, selectViewports } from './selection.mjs';
 import { getCaptureStatePath, loadCaptureState } from '../capture/capture-state.mjs';
@@ -32,6 +33,83 @@ function parsePairCapture(filePath) {
     viewport: match.groups.viewport,
     filePath,
   };
+}
+
+function buildCaptureKey(screenOrFileId, locale, viewportId) {
+  return `${screenOrFileId}::${locale}::${viewportId}`;
+}
+
+async function loadLatestSnapshotStageArtifacts(config, stage) {
+  const snapshotsDir = path.join(config.meta.artifactsRoot, 'snapshots');
+  if (!(await directoryExists(snapshotsDir))) {
+    return null;
+  }
+
+  const runDirs = (await readdir(snapshotsDir, { withFileTypes: true }).catch(() => []))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort((left, right) => right.localeCompare(left));
+
+  for (const runId of runDirs) {
+    const manifestPath = path.join(snapshotsDir, runId, 'manifest.json');
+    if (!(await fileExists(manifestPath))) {
+      continue;
+    }
+
+    let manifest;
+    try {
+      manifest = await readJson(manifestPath);
+    } catch {
+      continue;
+    }
+
+    if (manifest?.kind !== 'snapshot-run') {
+      continue;
+    }
+
+    const captures = [];
+    for (const item of manifest.captures ?? []) {
+      if (item?.stageId !== stage.id || !item?.current) {
+        continue;
+      }
+
+      const absoluteCurrentPath = path.join(config.meta.projectRoot, item.current);
+      if (!(await fileExists(absoluteCurrentPath))) {
+        continue;
+      }
+
+      captures.push(item);
+    }
+
+    const overviews = [];
+    for (const item of manifest.overviewEntries ?? []) {
+      if (item?.stageId !== stage.id || !item?.path) {
+        continue;
+      }
+
+      const absoluteOverviewPath = path.join(config.meta.projectRoot, item.path);
+      if (!(await fileExists(absoluteOverviewPath))) {
+        continue;
+      }
+
+      overviews.push(item);
+    }
+
+    if (!captures.length && !overviews.length) {
+      continue;
+    }
+
+    return {
+      runId: manifest.run?.id ?? runId,
+      generatedAt: manifest.generatedAt ?? null,
+      manifest: manifest.artifacts?.manifest ?? toPosixPath(path.relative(config.meta.projectRoot, manifestPath)),
+      review: manifest.artifacts?.review ?? null,
+      captures,
+      overviews,
+    };
+  }
+
+  return null;
 }
 
 export function getStagePaths(config, stage, language) {
@@ -170,9 +248,24 @@ export async function buildStageManifest(config, stage, language) {
     pairFiles
       .map((filePath) => parsePairCapture(filePath))
       .filter(Boolean)
-      .map((item) => [`${item.screen}::${item.locale}::${item.viewport}`, item]),
+      .map((item) => [buildCaptureKey(item.screen, item.locale, item.viewport), item]),
   );
   const stateEntries = captureState.entries ?? {};
+  const snapshotFallback =
+    beforeFiles.length === 0 && afterFiles.length === 0 && pairFiles.length === 0
+      ? await loadLatestSnapshotStageArtifacts(config, stage)
+      : null;
+  const currentMap = new Map(
+    (snapshotFallback?.captures ?? []).map((item) => [
+      buildCaptureKey(item.screenId, item.locale, item.viewportId),
+      item,
+    ]),
+  );
+  const overviewArtifactPaths =
+    snapshotFallback?.overviews?.length && overviewFiles.length === 0
+      ? snapshotFallback.overviews.map((item) => item.path)
+      : overviewFiles.map((filePath) => toPosixPath(path.relative(config.meta.projectRoot, filePath)));
+  const currentArtifactPaths = (snapshotFallback?.captures ?? []).map((item) => item.current);
 
   function resolveExecution({ phase, screenId, viewportId, fallbackOutput }) {
     const entry = stateEntries[`${phase}::${screenId}::${viewportId}`];
@@ -216,14 +309,26 @@ export async function buildStageManifest(config, stage, language) {
     for (const screen of stage.screens) {
       const fileId = screen.fileId ?? screen.id;
       const locale = inferLocale(screen);
-      const key = `${fileId}::${locale}::${viewport.id}`;
+      const key = buildCaptureKey(fileId, locale, viewport.id);
       const before = beforeMap.get(key);
       const after = afterMap.get(key);
       const pair = pairMap.get(key);
-      const status = before && after ? 'complete' : before ? 'missing-after' : after ? 'missing-before' : 'missing-both';
+      const current = currentMap.get(buildCaptureKey(screen.id, locale, viewport.id));
+      const status = before && after
+        ? 'complete'
+        : current
+          ? 'current-only'
+          : snapshotFallback
+            ? 'missing-current'
+            : before
+              ? 'missing-after'
+              : after
+                ? 'missing-before'
+                : 'missing-both';
       const beforePath = before ? toPosixPath(path.relative(config.meta.projectRoot, before.filePath)) : null;
       const afterPath = after ? toPosixPath(path.relative(config.meta.projectRoot, after.filePath)) : null;
       const pairPath = pair ? toPosixPath(path.relative(config.meta.projectRoot, pair.filePath)) : null;
+      const currentPath = current?.current ?? null;
 
       captures.push({
         screenId: screen.id,
@@ -234,6 +339,7 @@ export async function buildStageManifest(config, stage, language) {
         before: beforePath,
         after: afterPath,
         pair: pairPath,
+        current: currentPath,
         status,
         execution: {
           before: resolveExecution({
@@ -254,6 +360,10 @@ export async function buildStageManifest(config, stage, language) {
   }
 
   const completeCaptures = captures.filter((item) => item.status === 'complete').length;
+  const currentCaptures = captures.filter((item) => item.status === 'current-only').length;
+  const reviewableCaptures = captures.filter(
+    (item) => item.status === 'complete' || item.status === 'current-only',
+  ).length;
   const failedCaptures = captures.reduce(
     (sum, item) =>
       sum
@@ -270,6 +380,15 @@ export async function buildStageManifest(config, stage, language) {
       title: stage.title,
       description: stage.description,
     },
+    snapshot:
+      snapshotFallback
+        ? {
+            runId: snapshotFallback.runId,
+            generatedAt: snapshotFallback.generatedAt,
+            manifest: snapshotFallback.manifest,
+            review: snapshotFallback.review,
+          }
+        : null,
     artifacts: {
       notes: toPosixPath(path.relative(config.meta.projectRoot, stagePaths.notesPath)),
       report: toPosixPath(path.relative(config.meta.projectRoot, stagePaths.reportPath)),
@@ -278,18 +397,21 @@ export async function buildStageManifest(config, stage, language) {
       before: beforeFiles.map((filePath) => toPosixPath(path.relative(config.meta.projectRoot, filePath))),
       after: afterFiles.map((filePath) => toPosixPath(path.relative(config.meta.projectRoot, filePath))),
       pairs: pairFiles.map((filePath) => toPosixPath(path.relative(config.meta.projectRoot, filePath))),
-      overviews: overviewFiles.map((filePath) => toPosixPath(path.relative(config.meta.projectRoot, filePath))),
+      current: currentArtifactPaths,
+      overviews: overviewArtifactPaths,
     },
     captures,
     counts: {
       before: beforeFiles.length,
       after: afterFiles.length,
       pairs: pairFiles.length,
-      overviews: overviewFiles.length,
+      currentCaptures,
+      overviews: overviewArtifactPaths.length,
       expectedCaptures: captures.length,
       completeCaptures,
+      reviewableCaptures,
       failedCaptures,
-      pendingCaptures: captures.length - completeCaptures,
+      pendingCaptures: captures.length - reviewableCaptures,
     },
   };
 

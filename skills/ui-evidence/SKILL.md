@@ -70,6 +70,8 @@ ui-evidence snapshot --config ./ui-evidence/config.yaml --scope <scope-id>
 ui-evidence review --config ./ui-evidence/config.yaml --stage <stage-id>
 ```
 
+`ui-evidence review --stage <stage-id>` reuses the latest snapshot `current` captures when a stage has no before/after comparison artifacts yet. If neither stage artifacts nor snapshot artifacts exist, it should fail instead of emitting an empty review.
+
 ## What to inspect locally first
 
 - package manager and dev scripts

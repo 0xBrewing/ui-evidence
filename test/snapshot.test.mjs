@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { loadConfig } from '../src/config/load-config.mjs';
+import { buildReviewPages } from '../src/lib/review/build-review.mjs';
 import { runSnapshot } from '../src/lib/snapshot/run-snapshot.mjs';
 import { readJson } from '../src/lib/util/fs.mjs';
 
@@ -190,6 +191,101 @@ stages:
       /Cannot combine --scope with --stage or --screens/,
     );
   } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('buildReviewPages reuses the latest snapshot artifacts for stage-only reviews', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-snapshot-stage-review-'));
+  const runtime = await createServer({
+    '/': '<main data-testid="screen-hero"><button>Hero button</button></main>',
+  });
+
+  try {
+    await mkdir(path.join(tempDir, 'ui-evidence'), { recursive: true });
+    await writeFile(
+      path.join(tempDir, 'ui-evidence', 'config.yaml'),
+      `version: 1
+project:
+  name: snapshot-app
+  rootDir: ..
+artifacts:
+  rootDir: ui-evidence/screenshots
+  notesLanguage: en
+  reportLanguage: en
+capture:
+  baseUrl: ${runtime.baseUrl}
+  browser:
+    headless: true
+    freezeAnimations: true
+    waitForFonts: true
+    waitForNetworkIdleMs: 0
+  viewports:
+    - id: mobile-390
+      viewport:
+        width: 390
+        height: 844
+      locale: en-US
+      timezoneId: UTC
+servers:
+  after:
+    baseUrl: ${runtime.baseUrl}
+stages:
+  - id: landing
+    title: Landing
+    description: Landing page
+    defaultViewports:
+      - mobile-390
+    screens:
+      - id: hero
+        fileId: hero
+        label: Hero
+        path: /
+        waitFor:
+          testId: screen-hero
+`,
+      'utf8',
+    );
+
+    const config = await loadConfig(path.join(tempDir, 'ui-evidence', 'config.yaml'));
+    await runSnapshot({
+      config,
+      stageArg: 'landing',
+      label: 'first',
+      language: 'en',
+      now: new Date('2026-03-25T12:34:56Z'),
+    });
+    const latestSnapshot = await runSnapshot({
+      config,
+      stageArg: 'landing',
+      label: 'second',
+      language: 'en',
+      now: new Date('2026-03-25T12:35:56Z'),
+    });
+
+    const written = await buildReviewPages({
+      config,
+      stageArg: 'landing',
+      language: 'en',
+    });
+
+    const manifest = await readJson(path.join(tempDir, 'ui-evidence', 'screenshots', 'landing', 'manifest.json'));
+    const reviewHtml = await readFile(path.join(tempDir, 'ui-evidence', 'screenshots', 'landing', 'review', 'index.html'), 'utf8');
+
+    assert.equal(written.length, 1);
+    assert.equal(manifest.snapshot.runId, latestSnapshot.runId);
+    assert.equal(manifest.counts.currentCaptures, 1);
+    assert.equal(manifest.counts.reviewableCaptures, 1);
+    assert.equal(manifest.counts.pendingCaptures, 0);
+    assert.equal(manifest.counts.overviews, 1);
+    assert.equal(manifest.captures[0].status, 'current-only');
+    assert.ok(manifest.captures[0].current.includes(latestSnapshot.runId));
+    assert.ok(manifest.artifacts.current[0].includes(latestSnapshot.runId));
+    assert.match(reviewHtml, /Current Only/);
+    assert.match(reviewHtml, new RegExp(latestSnapshot.runId));
+    assert.match(reviewHtml, /Current/);
+  } finally {
+    await new Promise((resolve) => runtime.server.close(resolve));
     await rm(tempDir, { recursive: true, force: true });
   }
 });

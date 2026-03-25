@@ -160,6 +160,8 @@ pnpm exec ui-evidence run --config ./ui-evidence/config.yaml --stage primary-flo
 pnpm exec ui-evidence snapshot --config ./ui-evidence/config.yaml --scope design-system-rollout
 ```
 
+어떤 stage 에 before/after 비교 산출물이 아직 없으면 `ui-evidence review --stage <stage-id>` 는 해당 stage 의 최신 snapshot `current` 캡처를 재사용합니다. stage 산출물도 snapshot 산출물도 없으면, 빈 review 를 만드는 대신 명확하게 에러를 반환합니다.
+
 열어볼 경로:
 
 ```text

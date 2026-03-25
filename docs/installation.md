@@ -94,6 +94,8 @@ ui-evidence run --config ./ui-evidence/config.yaml --stage <stage-id> --after-at
 ui-evidence snapshot --config ./ui-evidence/config.yaml --scope <scope-id>
 ```
 
+`ui-evidence review --stage <stage-id>` prefers stage comparison artifacts when they exist. If the stage has no before/after assets yet, it falls back to the latest snapshot `current` captures for that stage. If neither source exists, the command fails instead of writing an empty review.
+
 Return:
 
 - `review/index.html`

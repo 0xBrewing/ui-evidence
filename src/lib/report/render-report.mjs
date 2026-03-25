@@ -24,8 +24,10 @@ ${screenLines}
 - before: ${manifest.counts.before}장
 - after: ${manifest.counts.after}장
 - pair 비교 이미지: ${manifest.counts.pairs}장
+- current 캡처: ${manifest.counts.currentCaptures ?? 0}장
 - overview 이미지: ${manifest.counts.overviews}장
 - 완료된 비교 카드: ${manifest.counts.completeCaptures}/${manifest.counts.expectedCaptures}
+- 검토 가능한 카드: ${manifest.counts.reviewableCaptures ?? manifest.counts.completeCaptures}/${manifest.counts.expectedCaptures}
 - 실패한 raw 캡처: ${manifest.counts.failedCaptures}
 
 ## 체크리스트
@@ -38,6 +40,9 @@ ${checklist}
 
 ## 비교 이미지
 ${manifest.artifacts.overviews.map((item) => `- \`${item}\``).join('\n') || '- 없음'}
+
+## current 이미지
+${(manifest.artifacts.current ?? []).map((item) => `- \`${item}\``).join('\n') || '- 없음'}
 
 ## pair 이미지
 ${manifest.artifacts.pairs.map((item) => `- \`${item}\``).join('\n') || '- 없음'}
@@ -68,8 +73,10 @@ ${screenLines}
 - before: ${manifest.counts.before}
 - after: ${manifest.counts.after}
 - pair comparisons: ${manifest.counts.pairs}
+- current captures: ${manifest.counts.currentCaptures ?? 0}
 - overview sheets: ${manifest.counts.overviews}
 - completed review cards: ${manifest.counts.completeCaptures}/${manifest.counts.expectedCaptures}
+- reviewable cards: ${manifest.counts.reviewableCaptures ?? manifest.counts.completeCaptures}/${manifest.counts.expectedCaptures}
 - failed raw captures: ${manifest.counts.failedCaptures}
 
 ## Checklist
@@ -82,6 +89,9 @@ ${checklist}
 
 ## Overview Images
 ${manifest.artifacts.overviews.map((item) => `- \`${item}\``).join('\n') || '- none'}
+
+## Current Images
+${(manifest.artifacts.current ?? []).map((item) => `- \`${item}\``).join('\n') || '- none'}
 
 ## Pair Images
 ${manifest.artifacts.pairs.map((item) => `- \`${item}\``).join('\n') || '- none'}

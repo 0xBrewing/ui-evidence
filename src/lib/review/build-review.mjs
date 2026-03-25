@@ -23,6 +23,7 @@ function buildReviewData(config, stage, manifest, stagePaths) {
     beforeLink: item.before ? relativeFromReview(stagePaths, config.meta.projectRoot, item.before) : null,
     afterLink: item.after ? relativeFromReview(stagePaths, config.meta.projectRoot, item.after) : null,
     pairLink: item.pair ? relativeFromReview(stagePaths, config.meta.projectRoot, item.pair) : null,
+    currentLink: item.current ? relativeFromReview(stagePaths, config.meta.projectRoot, item.current) : null,
   }));
 
   return {
@@ -324,8 +325,10 @@ function renderReviewHtml(reviewData) {
       }
 
       .badge[data-status="complete"] { background: rgba(44,122,84,0.13); color: var(--ok); }
+      .badge[data-status="current-only"] { background: rgba(183, 99, 45, 0.16); color: var(--accent); }
       .badge[data-status="missing-before"],
-      .badge[data-status="missing-after"] { background: rgba(183,121,31,0.14); color: var(--warn); }
+      .badge[data-status="missing-after"],
+      .badge[data-status="missing-current"] { background: rgba(183,121,31,0.14); color: var(--warn); }
       .badge[data-status="missing-both"] { background: rgba(155,44,44,0.13); color: var(--danger); }
 
       .preview-shell {
@@ -396,9 +399,11 @@ function renderReviewHtml(reviewData) {
 
       const statusLabels = {
         complete: 'Complete',
+        'current-only': 'Current Only',
         'missing-before': 'Missing Before',
         'missing-after': 'Missing After',
-        'missing-both': 'Missing Both'
+        'missing-both': 'Missing Both',
+        'missing-current': 'Missing Current'
       };
 
       function escapeHtml(value) {
@@ -427,12 +432,15 @@ function renderReviewHtml(reviewData) {
       function captureCard(item) {
         const preview = item.pairLink
           ? '<img loading="lazy" src="' + item.pairLink + '" alt="' + escapeHtml(item.label) + ' comparison" />'
-          : '<div class="placeholder">Pair comparison is not available yet.<br />Capture both phases and run compare.</div>';
+          : item.currentLink
+            ? '<img loading="lazy" src="' + item.currentLink + '" alt="' + escapeHtml(item.label) + ' current capture" />'
+            : '<div class="placeholder">No reviewable image is available yet.<br />Run compare for pair cards or snapshot for current captures.</div>';
 
         const assetLinks = [
           item.beforeLink ? '<a href="' + item.beforeLink + '">Before</a>' : '',
           item.afterLink ? '<a href="' + item.afterLink + '">After</a>' : '',
           item.pairLink ? '<a href="' + item.pairLink + '">Pair</a>' : '',
+          item.currentLink ? '<a href="' + item.currentLink + '">Current</a>' : '',
         ].filter(Boolean).join('');
         const diagnostic = pickDiagnostic(item);
         const diagnosticHtml = diagnostic
@@ -484,8 +492,8 @@ function renderReviewHtml(reviewData) {
               </div>
               <div class="stats">
                 <div class="stat-card">
-                  <span class="stat-value">\${reviewData.counts.completeCaptures}/\${reviewData.counts.expectedCaptures}</span>
-                  <span class="stat-label">Completed capture pairs</span>
+                  <span class="stat-value">\${reviewData.counts.reviewableCaptures ?? reviewData.counts.completeCaptures}/\${reviewData.counts.expectedCaptures}</span>
+                  <span class="stat-label">Reviewable cards</span>
                 </div>
                 <div class="stat-card">
                   <span class="stat-value">\${reviewData.counts.overviews}</span>
@@ -524,14 +532,14 @@ function renderReviewHtml(reviewData) {
             <div class="overview-grid">
               \${reviewData.overviews.length
                 ? reviewData.overviews.map((item) => '<article class="overview-card"><img loading="lazy" src="' + item.path + '" alt="' + escapeHtml(item.label) + '" /></article>').join('')
-                : '<div class="overview-card"><div class="placeholder">Overview sheets appear here after running compare.</div></div>'}
+                : '<div class="overview-card"><div class="placeholder">Overview sheets appear here after running compare or snapshot.</div></div>'}
             </div>
           </section>
 
           <section class="section">
             <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:18px;">
               <div>
-                <div class="eyebrow">Pairs</div>
+                <div class="eyebrow">Screens</div>
                 <h2 style="margin-top:10px;font-size:2rem;">Review cards</h2>
               </div>
               <div class="stat-label">\${captures.length} card(s) visible</div>
@@ -556,6 +564,15 @@ function renderReviewHtml(reviewData) {
 </html>`;
 }
 
+function hasRenderableArtifacts(manifest) {
+  return manifest.counts.before > 0
+    || manifest.counts.after > 0
+    || manifest.counts.pairs > 0
+    || (manifest.counts.currentCaptures ?? 0) > 0
+    || manifest.counts.overviews > 0
+    || manifest.counts.failedCaptures > 0;
+}
+
 export async function buildReviewPages({ config, stageArg, language }) {
   const stages = selectStages(config, stageArg);
   const written = [];
@@ -563,6 +580,11 @@ export async function buildReviewPages({ config, stageArg, language }) {
   for (const stage of stages) {
     await ensureStageStructure(config, stage, language);
     const manifest = await buildStageManifest(config, stage, language);
+    if (!hasRenderableArtifacts(manifest)) {
+      throw new Error(
+        `No reviewable artifacts found for stage "${stage.id}". Run "ui-evidence run --stage ${stage.id}" or "ui-evidence snapshot --stage ${stage.id}" first.`,
+      );
+    }
     const stagePaths = getStagePaths(config, stage, language);
     const reviewData = buildReviewData(config, stage, manifest, stagePaths);
     await writeFile(stagePaths.reviewPath, renderReviewHtml(reviewData), 'utf8');

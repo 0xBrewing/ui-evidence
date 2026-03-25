@@ -160,6 +160,8 @@ Capture the current UI only:
 pnpm exec ui-evidence snapshot --config ./ui-evidence/config.yaml --scope design-system-rollout
 ```
 
+If a stage has no before/after comparison artifacts yet, `ui-evidence review --stage <stage-id>` now reuses the latest snapshot `current` captures for that stage. If neither stage artifacts nor snapshot artifacts exist, the command fails clearly instead of generating an empty review.
+
 Open:
 
 ```text
