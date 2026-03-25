@@ -433,11 +433,12 @@ export async function runSnapshot({
     baseUrlOverride,
     language,
     outputPathResolver: ({ stage, screen, viewport }) => buildCaptureOutputPath(paths, stage, screen, viewport),
+    persistState: false,
   });
-  const overviews = await buildSnapshotOverviews(config, paths, captured);
+  const overviews = await buildSnapshotOverviews(config, paths, captured.outputs);
 
   const selection = buildSelectionSummary(plan);
-  const captures = captured.map((item) => ({
+  const captures = captured.outputs.map((item) => ({
     stageId: item.stageId,
     stageTitle: item.stageTitle,
     screenId: item.screenId,
@@ -487,6 +488,7 @@ export async function runSnapshot({
       screens: selection.reduce((sum, item) => sum + item.screenIds.length, 0),
       captures: captures.length,
       overviews: overviewEntries.length,
+      failedCaptures: captured.counts.failed,
     },
   };
 
@@ -507,5 +509,6 @@ export async function runSnapshot({
     reviewPath: paths.reviewPath,
     manifestPath: paths.manifestPath,
     counts: snapshot.counts,
+    failedCaptures: captured.counts.failed,
   };
 }

@@ -18,18 +18,31 @@ async function waitForUrl(url, timeoutMs) {
 }
 
 export async function startServerSpec(server, options = {}) {
-  if (!server?.command) {
+  const resolved = resolveServerSpec(server);
+  if (!resolved) {
     return null;
   }
 
-  const child = spawnCommand(server.command, {
-    cwd: options.cwd,
-    env: server.env,
-    label: options.label,
-  });
+  if (resolved.mode === 'managed') {
+    if (!resolved.command) {
+      throw new Error('Managed server mode requires a command.');
+    }
 
-  await waitForUrl(server.readyUrl ?? server.baseUrl, server.timeoutMs ?? 60_000);
-  return { child, label: options.label };
+    const child = spawnCommand(resolved.command, {
+      cwd: options.cwd,
+      env: resolved.env,
+      label: options.label,
+    });
+
+    await waitForUrl(resolved.readyUrl, resolved.timeoutMs);
+    return { child, label: options.label, mode: resolved.mode };
+  }
+
+  if (resolved.readyUrl) {
+    await waitForUrl(resolved.readyUrl, resolved.timeoutMs);
+  }
+
+  return { child: null, label: options.label, mode: resolved.mode };
 }
 
 export async function startServer(config, phase, overrides = {}) {
@@ -49,4 +62,23 @@ export async function stopServer(handle) {
     return;
   }
   await stopChildProcess(handle.child);
+}
+
+export function resolveServerSpec(server) {
+  if (!server || !Object.keys(server).length) {
+    return null;
+  }
+
+  const mode = server.mode ?? (server.command ? 'managed' : 'attach');
+  const readyUrl = server.readyUrl ?? server.baseUrl;
+  if (!readyUrl && mode !== 'managed') {
+    return null;
+  }
+
+  return {
+    ...server,
+    mode,
+    readyUrl,
+    timeoutMs: server.timeoutMs ?? 60_000,
+  };
 }

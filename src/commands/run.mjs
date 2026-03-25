@@ -7,21 +7,38 @@ import { buildReviewPages } from '../lib/review/build-review.mjs';
 import { startServer, stopServer } from '../lib/server/process-server.mjs';
 import { prepareGitBaseline } from '../lib/baseline/git-baseline.mjs';
 
+function buildAttachOverride(baseUrl) {
+  if (!baseUrl) {
+    return {};
+  }
+
+  return {
+    server: {
+      mode: 'attach',
+      baseUrl,
+      readyUrl: baseUrl,
+    },
+  };
+}
+
 export async function handleRun(options) {
   const config = await loadConfig(options.config);
   const language = options.language ?? config.report?.language ?? config.artifacts.reportLanguage ?? 'en';
   const stageArg = options.stage ?? 'all';
   const screenIds = csvOption(options.screens);
   const viewportIds = csvOption(options.viewports);
-  const beforeRef = options.beforeRef ?? config.baseline?.git?.ref;
+  const beforeRef = options.beforeAttach ? null : options.beforeRef ?? config.baseline?.git?.ref;
 
   let beforeHandle = null;
   let afterHandle = null;
   let baseline = null;
+  let captureFailures = 0;
 
   try {
     if (!options.skipBefore) {
-      if (beforeRef) {
+      if (options.beforeAttach) {
+        beforeHandle = await startServer(config, 'before', buildAttachOverride(options.beforeAttach));
+      } else if (beforeRef) {
         baseline = await prepareGitBaseline(config, beforeRef);
         if (!baseline.server?.baseUrl) {
           throw new Error(`Baseline ref "${beforeRef}" is configured but no baseline server baseUrl is available.`);
@@ -35,15 +52,17 @@ export async function handleRun(options) {
         beforeHandle = await startServer(config, 'before');
       }
 
-      await captureStages({
+      const beforeCapture = await captureStages({
         config,
         phase: 'before',
         stageArg,
         screenIds,
         viewportIds,
-        baseUrlOverride: options.beforeBaseUrl ?? baseline?.server?.baseUrl,
+        baseUrlOverride: options.beforeAttach ?? options.beforeBaseUrl ?? baseline?.server?.baseUrl,
         language,
+        resume: Boolean(options.resume),
       });
+      captureFailures += beforeCapture.counts.failed;
     }
   } finally {
     await stopServer(beforeHandle);
@@ -52,16 +71,18 @@ export async function handleRun(options) {
 
   try {
     if (!options.skipAfter) {
-      afterHandle = await startServer(config, 'after');
-      await captureStages({
+      afterHandle = await startServer(config, 'after', buildAttachOverride(options.afterAttach));
+      const afterCapture = await captureStages({
         config,
         phase: 'after',
         stageArg,
         screenIds,
         viewportIds,
-        baseUrlOverride: options.afterBaseUrl,
+        baseUrlOverride: options.afterAttach ?? options.afterBaseUrl,
         language,
+        resume: Boolean(options.resume),
       });
+      captureFailures += afterCapture.counts.failed;
     }
   } finally {
     await stopServer(afterHandle);
@@ -90,5 +111,9 @@ export async function handleRun(options) {
       stageArg,
       language,
     });
+  }
+
+  if (captureFailures > 0) {
+    process.exitCode = 1;
   }
 }

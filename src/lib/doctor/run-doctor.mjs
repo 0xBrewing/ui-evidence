@@ -4,7 +4,7 @@ import { loadConfig, resolveProjectPath } from '../../config/load-config.mjs';
 import { openPreparedScreen } from '../capture/playwright-capture.mjs';
 import { discoverProject } from '../discover/discover-project.mjs';
 import { resolveBaselineOptions, prepareGitBaseline } from '../baseline/git-baseline.mjs';
-import { startServer, stopServer } from '../server/process-server.mjs';
+import { resolveServerSpec, startServer, stopServer } from '../server/process-server.mjs';
 import { loadHook } from '../util/hooks.mjs';
 import { fileExists } from '../util/fs.mjs';
 import { runCommandSync } from '../util/process.mjs';
@@ -227,12 +227,13 @@ export async function runDoctor(options = {}) {
     ));
 
     if (baseline.server?.baseUrl) {
+      const resolvedBaselineServer = resolveServerSpec(baseline.server);
       checks.push(makeCheck(
         'baseline-server',
         'pass',
-        baseline.server.command
+        resolvedBaselineServer?.mode === 'managed'
           ? `Baseline server will use ${baseline.server.command}`
-          : `Baseline server will reuse ${baseline.server.baseUrl}`,
+          : `Baseline server will attach to ${baseline.server.baseUrl}`,
       ));
     } else {
       checks.push(makeCheck(

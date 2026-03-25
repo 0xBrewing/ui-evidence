@@ -20,10 +20,13 @@ I built it after AI coding tools started changing the wrong UI or quietly skippi
 - compares `before` and `after` images
 - writes a local `review/index.html`
 - supports `main` or another git ref as the `before` baseline
+- attaches to an already running app when you do not want ui-evidence to launch the server
+- resumes long runs and skips raw captures that already succeeded
 - captures the current UI into a history snapshot bundle when you only need human review
 - scaffolds repo-local bootstrap files after the skill or package is installed
 
 The package is the local CLI. The skill is the easiest install surface for Codex, Claude Code, and other `SKILL.md`-based clients.
+The skill gets the workflow into the agent. The package provides the repo-local executable that actually runs captures.
 
 ## Real output
 
@@ -143,6 +146,12 @@ Compare the current branch against `main`:
 
 ```bash
 pnpm exec ui-evidence run --config ./ui-evidence.config.yaml --stage primary-flow --before-ref main
+```
+
+Attach to an already running app and resume only the missing or failed raw captures:
+
+```bash
+pnpm exec ui-evidence run --config ./ui-evidence.config.yaml --stage primary-flow --after-attach http://127.0.0.1:3000 --resume
 ```
 
 Capture the current UI only:

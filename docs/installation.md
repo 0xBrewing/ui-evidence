@@ -3,6 +3,7 @@
 This file is meant to be handed to an LLM.
 
 Prefer the installed `ui-evidence` skill if it is already available through `skills add`.
+The skill is the agent-facing install surface. The package is the repo-local CLI that executes captures.
 
 If a user says "read this file and set up ui-evidence for this repo", follow the steps below and keep the setup small.
 
@@ -89,6 +90,7 @@ Use the matching package-runner form of:
 ```bash
 ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id>
 ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id> --before-ref main
+ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id> --after-attach http://127.0.0.1:3000 --resume
 ui-evidence snapshot --config ./ui-evidence.config.yaml --scope <scope-id>
 ```
 

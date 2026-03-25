@@ -15,6 +15,7 @@ test('subcommand help exits before invoking the handler', async () => {
     const result = await runCommand(`node "${BIN_PATH}" run --help`, { cwd: tempDir });
     assert.match(result.stdout, /ui-evidence run/);
     assert.match(result.stdout, /Usage:/);
+    assert.match(result.stdout, /--resume/);
     assert.doesNotMatch(result.stdout, /Unknown stage|No config|Timed out/i);
   } finally {
     await rm(tempDir, { recursive: true, force: true });

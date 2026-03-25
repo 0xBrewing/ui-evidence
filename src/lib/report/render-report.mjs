@@ -26,6 +26,7 @@ ${screenLines}
 - pair 비교 이미지: ${manifest.counts.pairs}장
 - overview 이미지: ${manifest.counts.overviews}장
 - 완료된 비교 카드: ${manifest.counts.completeCaptures}/${manifest.counts.expectedCaptures}
+- 실패한 raw 캡처: ${manifest.counts.failedCaptures}
 
 ## 체크리스트
 ${checklist}
@@ -69,6 +70,7 @@ ${screenLines}
 - pair comparisons: ${manifest.counts.pairs}
 - overview sheets: ${manifest.counts.overviews}
 - completed review cards: ${manifest.counts.completeCaptures}/${manifest.counts.expectedCaptures}
+- failed raw captures: ${manifest.counts.failedCaptures}
 
 ## Checklist
 ${checklist}

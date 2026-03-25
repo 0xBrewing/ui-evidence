@@ -1,11 +1,17 @@
-import { access } from 'node:fs/promises';
+import { access, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium, devices } from '@playwright/test';
 import { ensureStageStructure } from '../util/stage-notes.mjs';
-import { ensureDir } from '../util/fs.mjs';
+import { ensureDir, fileExists } from '../util/fs.mjs';
 import { inferLocale, resolveBaseUrl, resolveCapturePlan } from '../util/selection.mjs';
 import { loadHook } from '../util/hooks.mjs';
 import { resolveProjectPath } from '../../config/load-config.mjs';
+import {
+  buildCaptureStateEntry,
+  buildCaptureStateKey,
+  loadCaptureState,
+  saveCaptureState,
+} from './capture-state.mjs';
 
 const captureCss = `
   *,
@@ -19,6 +25,15 @@ const captureCss = `
     transition: none !important;
   }
 `;
+
+const STEP_TIMING_KEYS = {
+  auth: 'authMs',
+  setup: 'setupMs',
+  goto: 'gotoMs',
+  waitFor: 'waitForMs',
+  prepare: 'prepareMs',
+  screenshot: 'screenshotMs',
+};
 
 function buildContextOptions(viewportSpec) {
   const devicePreset = viewportSpec.device ? devices[viewportSpec.device] : null;
@@ -34,6 +49,93 @@ function buildContextOptions(viewportSpec) {
     ...(viewportSpec.timezoneId ? { timezoneId: viewportSpec.timezoneId } : {}),
     ...(viewportSpec.colorScheme ? { colorScheme: viewportSpec.colorScheme } : {}),
   };
+}
+
+function createExecutionRecord() {
+  return {
+    status: 'missing',
+    startedAt: new Date().toISOString(),
+    finishedAt: null,
+    totalMs: null,
+    timings: {
+      authMs: 0,
+      setupMs: 0,
+      gotoMs: 0,
+      waitForMs: 0,
+      prepareMs: 0,
+      screenshotMs: 0,
+    },
+    failure: null,
+  };
+}
+
+function toMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function attachCaptureFailure(error, failure) {
+  if (error instanceof Error) {
+    if (!error.captureFailure) {
+      error.captureFailure = failure;
+    }
+    return error;
+  }
+
+  const wrapped = new Error(String(error));
+  wrapped.captureFailure = failure;
+  return wrapped;
+}
+
+function buildWaitTarget(screen) {
+  if (screen.waitFor?.testId) {
+    return {
+      type: 'testId',
+      value: screen.waitFor.testId,
+      timeoutMs: screen.waitFor.timeoutMs ?? 30_000,
+    };
+  }
+
+  if (screen.waitFor?.selector) {
+    return {
+      type: 'selector',
+      value: screen.waitFor.selector,
+      timeoutMs: screen.waitFor.timeoutMs ?? 30_000,
+    };
+  }
+
+  return null;
+}
+
+function buildFailure({ step, screen, error, waitTarget = null, lastRequest = null }) {
+  return {
+    step,
+    message: toMessage(error),
+    ...(step === 'waitFor' && waitTarget ? { waitTarget } : {}),
+    ...(lastRequest ? { lastRequest } : {}),
+    screenId: screen.id,
+  };
+}
+
+async function runCaptureStep({ step, execution = null, screen, getFailureMeta = null, task }) {
+  const startedAt = Date.now();
+  try {
+    return await task();
+  } catch (error) {
+    if (!execution) {
+      throw error;
+    }
+
+    throw attachCaptureFailure(error, buildFailure({
+      step,
+      screen,
+      error,
+      ...(getFailureMeta ? getFailureMeta() : {}),
+    }));
+  } finally {
+    if (execution) {
+      execution.timings[STEP_TIMING_KEYS[step]] = Date.now() - startedAt;
+    }
+  }
 }
 
 async function settlePage(page, captureConfig) {
@@ -59,18 +161,36 @@ async function settlePage(page, captureConfig) {
   );
 }
 
-async function bootstrapAuth(context, baseUrl, auth) {
+async function bootstrapAuth(context, baseUrl, auth, noteFailure = null) {
   if (!auth?.bootstrapRequest) {
     return;
   }
 
-  const response = await context.request.fetch(new URL(auth.bootstrapRequest.url, baseUrl).toString(), {
-    method: auth.bootstrapRequest.method ?? 'POST',
-    headers: auth.bootstrapRequest.headers,
-    data: auth.bootstrapRequest.json,
-  });
+  const method = auth.bootstrapRequest.method ?? 'POST';
+  const url = new URL(auth.bootstrapRequest.url, baseUrl).toString();
+
+  let response;
+  try {
+    response = await context.request.fetch(url, {
+      method,
+      headers: auth.bootstrapRequest.headers,
+      data: auth.bootstrapRequest.json,
+    });
+  } catch (error) {
+    noteFailure?.({
+      url,
+      method,
+      errorText: toMessage(error),
+    });
+    throw error;
+  }
 
   if (!response.ok()) {
+    noteFailure?.({
+      url,
+      method,
+      errorText: `HTTP ${response.status()}`,
+    });
     throw new Error(`Auth bootstrap failed for ${auth.bootstrapRequest.url} (${response.status()})`);
   }
 }
@@ -96,48 +216,138 @@ async function ensureStorageState(config, screen) {
   return resolvedPath;
 }
 
-export async function openPreparedScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language }) {
+async function prepareScreenContext({
+  browser,
+  config,
+  stage,
+  screen,
+  viewport,
+  phase,
+  baseUrl,
+  language,
+  execution = null,
+}) {
   const contextOptions = buildContextOptions(viewport);
-  const storageStatePath = await ensureStorageState(config, screen);
-  if (storageStatePath) {
-    contextOptions.storageState = storageStatePath;
-  }
+  const runtime = {
+    context: null,
+    page: null,
+    lastRequest: null,
+  };
 
-  const context = await browser.newContext(contextOptions);
-  const page = await context.newPage();
-  page.setDefaultTimeout(45_000);
+  const failureMeta = (step) => ({
+    waitTarget: step === 'waitFor' ? buildWaitTarget(screen) : null,
+    lastRequest: runtime.lastRequest,
+  });
 
   try {
-    await bootstrapAuth(context, baseUrl, screen.auth);
-    const setupHook = await loadHook(config, screen.hooks?.setup);
-    const prepareHook = await loadHook(config, screen.hooks?.prepare);
+    await runCaptureStep({
+      step: 'auth',
+      execution,
+      screen,
+      getFailureMeta: () => failureMeta('auth'),
+      task: async () => {
+        const storageStatePath = await ensureStorageState(config, screen);
+        if (storageStatePath) {
+          contextOptions.storageState = storageStatePath;
+        }
 
-    if (setupHook) {
-      await setupHook({ page, context, config, stage, screen, viewport, phase, baseUrl, language });
-    }
+        runtime.context = await browser.newContext(contextOptions);
+        runtime.page = await runtime.context.newPage();
+        runtime.page.setDefaultTimeout(45_000);
+        runtime.page.on('requestfailed', (request) => {
+          runtime.lastRequest = {
+            url: request.url(),
+            method: request.method(),
+            errorText: request.failure()?.errorText ?? 'Request failed',
+          };
+        });
 
-    await page.goto(new URL(screen.path, baseUrl).toString(), { waitUntil: 'domcontentloaded' });
-    if (config.capture.browser.freezeAnimations) {
-      await page.addStyleTag({ content: captureCss }).catch(() => {});
-    }
+        await bootstrapAuth(runtime.context, baseUrl, screen.auth, (requestFailure) => {
+          runtime.lastRequest = requestFailure;
+        });
+      },
+    });
 
-    await waitForReady(page, screen);
-    await settlePage(page, config.capture);
+    await runCaptureStep({
+      step: 'setup',
+      execution,
+      screen,
+      getFailureMeta: () => failureMeta('setup'),
+      task: async () => {
+        const setupHook = await loadHook(config, screen.hooks?.setup);
+        if (setupHook) {
+          await setupHook({
+            page: runtime.page,
+            context: runtime.context,
+            config,
+            stage,
+            screen,
+            viewport,
+            phase,
+            baseUrl,
+            language,
+          });
+        }
+      },
+    });
 
-    if (prepareHook) {
-      await prepareHook({ page, context, config, stage, screen, viewport, phase, baseUrl, language });
-      await settlePage(page, config.capture);
-    }
+    await runCaptureStep({
+      step: 'goto',
+      execution,
+      screen,
+      getFailureMeta: () => failureMeta('goto'),
+      task: async () => {
+        await runtime.page.goto(new URL(screen.path, baseUrl).toString(), { waitUntil: 'domcontentloaded' });
+        if (config.capture.browser.freezeAnimations) {
+          await runtime.page.addStyleTag({ content: captureCss }).catch(() => {});
+        }
+      },
+    });
 
-    return { context, page };
+    await runCaptureStep({
+      step: 'waitFor',
+      execution,
+      screen,
+      getFailureMeta: () => failureMeta('waitFor'),
+      task: async () => {
+        await waitForReady(runtime.page, screen);
+        await settlePage(runtime.page, config.capture);
+      },
+    });
+
+    await runCaptureStep({
+      step: 'prepare',
+      execution,
+      screen,
+      getFailureMeta: () => failureMeta('prepare'),
+      task: async () => {
+        const prepareHook = await loadHook(config, screen.hooks?.prepare);
+        if (prepareHook) {
+          await prepareHook({
+            page: runtime.page,
+            context: runtime.context,
+            config,
+            stage,
+            screen,
+            viewport,
+            phase,
+            baseUrl,
+            language,
+          });
+          await settlePage(runtime.page, config.capture);
+        }
+      },
+    });
+
+    return runtime;
   } catch (error) {
-    await context.close().catch(() => {});
+    await runtime.context?.close().catch(() => {});
     throw error;
   }
 }
 
-async function captureScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language, outputPath }) {
-  const { context, page } = await openPreparedScreen({
+export async function openPreparedScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language }) {
+  const prepared = await prepareScreenContext({
     browser,
     config,
     stage,
@@ -148,15 +358,59 @@ async function captureScreen({ browser, config, stage, screen, viewport, phase, 
     language,
   });
 
+  return {
+    context: prepared.context,
+    page: prepared.page,
+  };
+}
+
+async function captureScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language, outputPath }) {
+  const execution = createExecutionRecord();
+  const captureStartedAt = Date.now();
+
   try {
-    await page.screenshot({
-      fullPage: screen.screenshot?.fullPage ?? true,
-      path: outputPath,
+    const prepared = await prepareScreenContext({
+      browser,
+      config,
+      stage,
+      screen,
+      viewport,
+      phase,
+      baseUrl,
+      language,
+      execution,
     });
 
-    return outputPath;
+    try {
+      await runCaptureStep({
+        step: 'screenshot',
+        execution,
+        screen,
+        getFailureMeta: () => ({ lastRequest: prepared.lastRequest }),
+        task: async () => {
+          await prepared.page.screenshot({
+            fullPage: screen.screenshot?.fullPage ?? true,
+            path: outputPath,
+          });
+        },
+      });
+
+      execution.status = 'success';
+      return { outputPath, execution };
+    } finally {
+      await prepared.context.close().catch(() => {});
+    }
+  } catch (error) {
+    execution.status = 'failed';
+    execution.failure = error.captureFailure ?? buildFailure({
+      step: 'screenshot',
+      screen,
+      error,
+    });
+    return { outputPath: null, execution };
   } finally {
-    await context.close();
+    execution.finishedAt = new Date().toISOString();
+    execution.totalMs = Date.now() - captureStartedAt;
   }
 }
 
@@ -167,6 +421,24 @@ function buildPhaseOutputPath({ config, stage, screen, viewport, phase }) {
   return path.join(stageDir, `${outputBaseId}__${locale}__${viewport.id}__${phase}.png`);
 }
 
+async function canReuseCapture({ resume, state, phase, screen, viewport, outputPath }) {
+  if (!resume) {
+    return false;
+  }
+
+  const key = buildCaptureStateKey({
+    phase,
+    screenId: screen.id,
+    viewportId: viewport.id,
+  });
+  const entry = state.entries?.[key];
+  if (entry?.status !== 'success') {
+    return false;
+  }
+
+  return fileExists(outputPath);
+}
+
 export async function captureResolvedPlan({
   config,
   phase,
@@ -174,14 +446,39 @@ export async function captureResolvedPlan({
   baseUrlOverride,
   language,
   outputPathResolver = buildPhaseOutputPath,
+  resume = false,
+  persistState = true,
 }) {
   const browser = await chromium.launch({ headless: config.capture.browser.headless });
   const outputs = [];
+  const failures = [];
+  const skipped = [];
+  const stateByStageId = new Map();
+
+  async function getStageState(stage) {
+    if (!persistState) {
+      return {
+        version: 1,
+        updatedAt: null,
+        entries: {},
+      };
+    }
+
+    const existing = stateByStageId.get(stage.id);
+    if (existing) {
+      return existing;
+    }
+
+    const loaded = await loadCaptureState(config, stage);
+    stateByStageId.set(stage.id, loaded);
+    return loaded;
+  }
 
   try {
     for (const selection of selections) {
       const { stage, screens, viewports } = selection;
       const baseUrl = resolveBaseUrl(config, phase, baseUrlOverride);
+      const state = await getStageState(stage);
 
       for (const viewport of viewports) {
         for (const screen of screens) {
@@ -193,7 +490,27 @@ export async function captureResolvedPlan({
             phase,
           });
           await ensureDir(path.dirname(plannedOutputPath));
-          const outputPath = await captureScreen({
+
+          if (await canReuseCapture({
+            resume,
+            state,
+            phase,
+            screen,
+            viewport,
+            outputPath: plannedOutputPath,
+          })) {
+            skipped.push({
+              stageId: stage.id,
+              screenId: screen.id,
+              viewportId: viewport.id,
+              outputPath: plannedOutputPath,
+            });
+            console.log(`skipped ${stage.id}/${phase}/${screen.id} (${viewport.id})`);
+            continue;
+          }
+
+          await rm(plannedOutputPath, { force: true }).catch(() => {});
+          const result = await captureScreen({
             browser,
             config,
             stage,
@@ -204,16 +521,54 @@ export async function captureResolvedPlan({
             language,
             outputPath: plannedOutputPath,
           });
-          outputs.push({
+          const locale = inferLocale(screen);
+          const stateKey = buildCaptureStateKey({
+            phase,
+            screenId: screen.id,
+            viewportId: viewport.id,
+          });
+
+          state.entries[stateKey] = buildCaptureStateEntry({
+            config,
+            phase,
+            stage,
+            screen,
+            viewport,
+            locale,
+            execution: result.execution,
+            outputPath: result.outputPath ?? plannedOutputPath,
+          });
+          if (persistState) {
+            await saveCaptureState(config, stage, state);
+          }
+
+          if (result.execution.status === 'success') {
+            outputs.push({
+              stageId: stage.id,
+              stageTitle: stage.title,
+              screenId: screen.id,
+              label: screen.label,
+              locale,
+              viewportId: viewport.id,
+              outputPath: result.outputPath,
+            });
+            console.log(`captured ${stage.id}/${phase}/${screen.id} (${viewport.id})`);
+            continue;
+          }
+
+          failures.push({
             stageId: stage.id,
             stageTitle: stage.title,
             screenId: screen.id,
             label: screen.label,
-            locale: inferLocale(screen),
+            locale,
             viewportId: viewport.id,
-            outputPath,
+            outputPath: plannedOutputPath,
+            execution: result.execution,
           });
-          console.log(`captured ${stage.id}/${phase}/${screen.id} (${viewport.id})`);
+          console.error(
+            `failed ${stage.id}/${phase}/${screen.id} (${viewport.id}): ${result.execution.failure?.step ?? 'capture'} ${result.execution.failure?.message ?? 'unknown error'}`,
+          );
         }
       }
     }
@@ -221,7 +576,17 @@ export async function captureResolvedPlan({
     await browser.close();
   }
 
-  return outputs;
+  return {
+    outputs,
+    failures,
+    skipped,
+    counts: {
+      captured: outputs.length,
+      failed: failures.length,
+      skipped: skipped.length,
+    },
+    hasFailures: failures.length > 0,
+  };
 }
 
 export async function captureStages({
@@ -232,6 +597,7 @@ export async function captureStages({
   viewportIds = [],
   baseUrlOverride,
   language,
+  resume = false,
 }) {
   const plan = resolveCapturePlan(config, {
     stageArg,
@@ -249,5 +615,6 @@ export async function captureStages({
     selections: plan.selections,
     baseUrlOverride,
     language,
+    resume,
   });
 }

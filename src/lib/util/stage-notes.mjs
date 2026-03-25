@@ -2,6 +2,7 @@ import path from 'node:path';
 import { ensureDir, fileExists, listFiles, toPosixPath, writeJson } from './fs.mjs';
 import { writeFile } from 'node:fs/promises';
 import { inferLocale, selectViewports } from './selection.mjs';
+import { getCaptureStatePath, loadCaptureState } from '../capture/capture-state.mjs';
 
 const RAW_CAPTURE_PATTERN = /^(?<screen>.+?)__(?<locale>[^_]+)__(?<viewport>[^_]+)__(?<phase>before|after)\.png$/;
 const PAIR_CAPTURE_PATTERN = /^(?<screen>.+?)__(?<locale>[^_]+)__(?<viewport>[^_]+)__compare\.png$/;
@@ -46,6 +47,7 @@ export function getStagePaths(config, stage, language) {
     notesPath: path.join(stageDir, `notes.${language}.md`),
     reportPath: path.join(stageDir, `report.${language}.md`),
     manifestPath: path.join(stageDir, 'manifest.json'),
+    captureStatePath: getCaptureStatePath(config, stage),
     reviewPath: path.join(stageDir, 'review', 'index.html'),
   };
 }
@@ -144,11 +146,12 @@ export async function ensureStageStructure(config, stage, language) {
 
 export async function buildStageManifest(config, stage, language) {
   const stagePaths = getStagePaths(config, stage, language);
-  const [beforeFiles, afterFiles, pairFiles, overviewFiles] = await Promise.all([
+  const [beforeFiles, afterFiles, pairFiles, overviewFiles, captureState] = await Promise.all([
     listFiles(stagePaths.beforeDir, '.png'),
     listFiles(stagePaths.afterDir, '.png'),
     listFiles(stagePaths.pairDir, '.png'),
     listFiles(stagePaths.overviewDir, '.png'),
+    loadCaptureState(config, stage),
   ]);
 
   const beforeMap = new Map(
@@ -169,6 +172,44 @@ export async function buildStageManifest(config, stage, language) {
       .filter(Boolean)
       .map((item) => [`${item.screen}::${item.locale}::${item.viewport}`, item]),
   );
+  const stateEntries = captureState.entries ?? {};
+
+  function resolveExecution({ phase, screenId, viewportId, fallbackOutput }) {
+    const entry = stateEntries[`${phase}::${screenId}::${viewportId}`];
+    if (entry) {
+      return {
+        status: entry.status ?? 'missing',
+        startedAt: entry.startedAt ?? null,
+        finishedAt: entry.finishedAt ?? null,
+        totalMs: entry.totalMs ?? null,
+        timings: entry.timings ?? {},
+        failure: entry.failure ?? null,
+        outputPath: entry.outputPath ?? fallbackOutput ?? null,
+      };
+    }
+
+    if (fallbackOutput) {
+      return {
+        status: 'success',
+        startedAt: null,
+        finishedAt: null,
+        totalMs: null,
+        timings: {},
+        failure: null,
+        outputPath: fallbackOutput,
+      };
+    }
+
+    return {
+      status: 'missing',
+      startedAt: null,
+      finishedAt: null,
+      totalMs: null,
+      timings: {},
+      failure: null,
+      outputPath: null,
+    };
+  }
 
   const captures = [];
   for (const viewport of selectViewports(config, stage)) {
@@ -180,6 +221,9 @@ export async function buildStageManifest(config, stage, language) {
       const after = afterMap.get(key);
       const pair = pairMap.get(key);
       const status = before && after ? 'complete' : before ? 'missing-after' : after ? 'missing-before' : 'missing-both';
+      const beforePath = before ? toPosixPath(path.relative(config.meta.projectRoot, before.filePath)) : null;
+      const afterPath = after ? toPosixPath(path.relative(config.meta.projectRoot, after.filePath)) : null;
+      const pairPath = pair ? toPosixPath(path.relative(config.meta.projectRoot, pair.filePath)) : null;
 
       captures.push({
         screenId: screen.id,
@@ -187,15 +231,36 @@ export async function buildStageManifest(config, stage, language) {
         label: screen.label,
         locale,
         viewportId: viewport.id,
-        before: before ? toPosixPath(path.relative(config.meta.projectRoot, before.filePath)) : null,
-        after: after ? toPosixPath(path.relative(config.meta.projectRoot, after.filePath)) : null,
-        pair: pair ? toPosixPath(path.relative(config.meta.projectRoot, pair.filePath)) : null,
+        before: beforePath,
+        after: afterPath,
+        pair: pairPath,
         status,
+        execution: {
+          before: resolveExecution({
+            phase: 'before',
+            screenId: screen.id,
+            viewportId: viewport.id,
+            fallbackOutput: beforePath,
+          }),
+          after: resolveExecution({
+            phase: 'after',
+            screenId: screen.id,
+            viewportId: viewport.id,
+            fallbackOutput: afterPath,
+          }),
+        },
       });
     }
   }
 
   const completeCaptures = captures.filter((item) => item.status === 'complete').length;
+  const failedCaptures = captures.reduce(
+    (sum, item) =>
+      sum
+      + Number(item.execution.before.status === 'failed')
+      + Number(item.execution.after.status === 'failed'),
+    0,
+  );
 
   const manifest = {
     version: 1,
@@ -209,6 +274,7 @@ export async function buildStageManifest(config, stage, language) {
       notes: toPosixPath(path.relative(config.meta.projectRoot, stagePaths.notesPath)),
       report: toPosixPath(path.relative(config.meta.projectRoot, stagePaths.reportPath)),
       review: toPosixPath(path.relative(config.meta.projectRoot, stagePaths.reviewPath)),
+      captureState: toPosixPath(path.relative(config.meta.projectRoot, stagePaths.captureStatePath)),
       before: beforeFiles.map((filePath) => toPosixPath(path.relative(config.meta.projectRoot, filePath))),
       after: afterFiles.map((filePath) => toPosixPath(path.relative(config.meta.projectRoot, filePath))),
       pairs: pairFiles.map((filePath) => toPosixPath(path.relative(config.meta.projectRoot, filePath))),
@@ -222,6 +288,7 @@ export async function buildStageManifest(config, stage, language) {
       overviews: overviewFiles.length,
       expectedCaptures: captures.length,
       completeCaptures,
+      failedCaptures,
       pendingCaptures: captures.length - completeCaptures,
     },
   };

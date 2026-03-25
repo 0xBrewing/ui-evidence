@@ -43,6 +43,7 @@ can run with minimal follow-up questions.
 ```bash
 {{UI_EVIDENCE_EXEC}} run --config {{CONFIG_PATH}} --stage <stage-id>
 {{UI_EVIDENCE_EXEC}} run --config {{CONFIG_PATH}} --stage <stage-id> --before-ref main
+{{UI_EVIDENCE_EXEC}} run --config {{CONFIG_PATH}} --stage <stage-id> --after-attach http://127.0.0.1:3000 --resume
 ```
 
 6. Return these paths after execution:

@@ -23,6 +23,9 @@ export async function handleSnapshot(options) {
 
     console.log(`done: ${result.counts.captures} current capture(s), ${result.counts.overviews} overview(s)`);
     console.log(`review: ${result.reviewPath}`);
+    if (result.failedCaptures > 0) {
+      process.exitCode = 1;
+    }
   } finally {
     await stopServer(afterHandle);
   }

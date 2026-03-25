@@ -16,6 +16,7 @@ Use this skill when the user wants an agent to:
 - compare the current checkout against another git ref
 
 This skill is intentionally thin. The CLI is the engine.
+The skill is the agent-facing entrypoint. The package provides the repo-local executable that actually runs capture and review commands.
 
 ## Bootstrap first
 
@@ -64,6 +65,7 @@ ui-evidence init --interactive --config ./ui-evidence.config.yaml
 ui-evidence doctor --config ./ui-evidence.config.yaml
 ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id>
 ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id> --before-ref main
+ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id> --after-attach http://127.0.0.1:3000 --resume
 ui-evidence snapshot --config ./ui-evidence.config.yaml --scope <scope-id>
 ui-evidence review --config ./ui-evidence.config.yaml --stage <stage-id>
 ```

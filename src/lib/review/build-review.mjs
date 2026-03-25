@@ -360,6 +360,15 @@ function renderReviewHtml(reviewData) {
         font-weight: 700;
       }
 
+      .diagnostic {
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(155, 44, 44, 0.08);
+        color: #6b2d2d;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
       @media (max-width: 900px) {
         main {
           width: min(100vw - 20px, 100%);
@@ -401,6 +410,20 @@ function renderReviewHtml(reviewData) {
           .replaceAll("'", '&#39;');
       }
 
+      function pickDiagnostic(item) {
+        const afterFailure = item.execution?.after?.status === 'failed' ? item.execution.after.failure : null;
+        if (afterFailure) {
+          return { phase: 'after', ...afterFailure };
+        }
+
+        const beforeFailure = item.execution?.before?.status === 'failed' ? item.execution.before.failure : null;
+        if (beforeFailure) {
+          return { phase: 'before', ...beforeFailure };
+        }
+
+        return null;
+      }
+
       function captureCard(item) {
         const preview = item.pairLink
           ? '<img loading="lazy" src="' + item.pairLink + '" alt="' + escapeHtml(item.label) + ' comparison" />'
@@ -411,6 +434,12 @@ function renderReviewHtml(reviewData) {
           item.afterLink ? '<a href="' + item.afterLink + '">After</a>' : '',
           item.pairLink ? '<a href="' + item.pairLink + '">Pair</a>' : '',
         ].filter(Boolean).join('');
+        const diagnostic = pickDiagnostic(item);
+        const diagnosticHtml = diagnostic
+          ? '<div class="diagnostic"><strong>' + escapeHtml(diagnostic.phase) + '</strong> · '
+            + escapeHtml(diagnostic.step ?? 'capture') + ' · '
+            + escapeHtml(diagnostic.message ?? 'Unknown failure') + '</div>'
+          : '';
 
         return \`
           <article class="capture-card" data-status="\${item.status}" data-viewport="\${item.viewportId}">
@@ -422,6 +451,7 @@ function renderReviewHtml(reviewData) {
               <span class="badge" data-status="\${item.status}">\${statusLabels[item.status] ?? item.status}</span>
             </div>
             <div class="preview-shell">\${preview}</div>
+            \${diagnosticHtml}
             <div class="asset-links">\${assetLinks}</div>
           </article>
         \`;

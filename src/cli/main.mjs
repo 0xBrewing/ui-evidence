@@ -119,11 +119,12 @@ Examples:
   run: `ui-evidence run
 
 Usage:
-  ui-evidence run [--config <path>] [--stage <id[,id...]>|all] [--screens <id[,id...]>] [--viewports <id[,id...]>] [--before-ref <ref>] [--before-base-url <url>] [--after-base-url <url>] [--skip-before] [--skip-after] [--skip-compare] [--skip-report] [--skip-review]
+  ui-evidence run [--config <path>] [--stage <id[,id...]>|all] [--screens <id[,id...]>] [--viewports <id[,id...]>] [--before-ref <ref>] [--before-base-url <url>] [--after-base-url <url>] [--before-attach <url>] [--after-attach <url>] [--resume] [--skip-before] [--skip-after] [--skip-compare] [--skip-report] [--skip-review]
 
 Examples:
   ui-evidence run --stage primary-flow
-  ui-evidence run --stage primary-flow --before-ref main`,
+  ui-evidence run --stage primary-flow --before-ref main
+  ui-evidence run --stage primary-flow --after-attach http://127.0.0.1:3100 --resume`,
   schema: `ui-evidence schema
 
 Usage:

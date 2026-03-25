@@ -10,7 +10,7 @@ export async function handleCapture(options) {
 
   const config = await loadConfig(options.config);
   const language = options.language ?? config.report?.language ?? config.artifacts.reportLanguage ?? 'en';
-  const outputs = await captureStages({
+  const result = await captureStages({
     config,
     phase,
     stageArg: options.stage ?? 'all',
@@ -18,7 +18,11 @@ export async function handleCapture(options) {
     viewportIds: csvOption(options.viewports),
     baseUrlOverride: options.baseUrl,
     language,
+    resume: Boolean(options.resume),
   });
 
-  console.log(`done: ${outputs.length} screenshot(s)`);
+  console.log(`done: ${result.counts.captured} screenshot(s), ${result.counts.failed} failed, ${result.counts.skipped} skipped`);
+  if (result.hasFailures) {
+    process.exitCode = 1;
+  }
 }

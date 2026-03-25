@@ -95,6 +95,10 @@
       "additionalProperties": false,
       "required": ["baseUrl"],
       "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["managed", "attach"]
+        },
         "baseUrl": { "type": "string" },
         "command": { "type": "string" },
         "cwd": { "type": "string" },
