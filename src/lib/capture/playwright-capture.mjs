@@ -2,7 +2,8 @@ import { access } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium, devices } from '@playwright/test';
 import { ensureStageStructure } from '../util/stage-notes.mjs';
-import { inferLocale, resolveBaseUrl, selectScreens, selectStages, selectViewports } from '../util/selection.mjs';
+import { ensureDir } from '../util/fs.mjs';
+import { inferLocale, resolveBaseUrl, resolveCapturePlan } from '../util/selection.mjs';
 import { loadHook } from '../util/hooks.mjs';
 import { resolveProjectPath } from '../../config/load-config.mjs';
 
@@ -135,7 +136,7 @@ export async function openPreparedScreen({ browser, config, stage, screen, viewp
   }
 }
 
-async function captureScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language }) {
+async function captureScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language, outputPath }) {
   const { context, page } = await openPreparedScreen({
     browser,
     config,
@@ -148,11 +149,6 @@ async function captureScreen({ browser, config, stage, screen, viewport, phase, 
   });
 
   try {
-    const locale = inferLocale(screen);
-    const outputBaseId = screen.fileId ?? screen.id;
-    const stageDir = path.join(config.meta.artifactsRoot, stage.id, phase);
-    const outputPath = path.join(stageDir, `${outputBaseId}__${locale}__${viewport.id}__${phase}.png`);
-
     await page.screenshot({
       fullPage: screen.screenshot?.fullPage ?? true,
       path: outputPath,
@@ -164,28 +160,39 @@ async function captureScreen({ browser, config, stage, screen, viewport, phase, 
   }
 }
 
-export async function captureStages({
+function buildPhaseOutputPath({ config, stage, screen, viewport, phase }) {
+  const locale = inferLocale(screen);
+  const outputBaseId = screen.fileId ?? screen.id;
+  const stageDir = path.join(config.meta.artifactsRoot, stage.id, phase);
+  return path.join(stageDir, `${outputBaseId}__${locale}__${viewport.id}__${phase}.png`);
+}
+
+export async function captureResolvedPlan({
   config,
   phase,
-  stageArg,
-  screenIds = [],
-  viewportIds = [],
+  selections,
   baseUrlOverride,
   language,
+  outputPathResolver = buildPhaseOutputPath,
 }) {
-  const stages = selectStages(config, stageArg);
   const browser = await chromium.launch({ headless: config.capture.browser.headless });
   const outputs = [];
 
   try {
-    for (const stage of stages) {
-      await ensureStageStructure(config, stage, language);
-      const selectedScreens = selectScreens(stage, screenIds);
-      const selectedViewports = selectViewports(config, stage, viewportIds);
+    for (const selection of selections) {
+      const { stage, screens, viewports } = selection;
       const baseUrl = resolveBaseUrl(config, phase, baseUrlOverride);
 
-      for (const viewport of selectedViewports) {
-        for (const screen of selectedScreens) {
+      for (const viewport of viewports) {
+        for (const screen of screens) {
+          const plannedOutputPath = outputPathResolver({
+            config,
+            stage,
+            screen,
+            viewport,
+            phase,
+          });
+          await ensureDir(path.dirname(plannedOutputPath));
           const outputPath = await captureScreen({
             browser,
             config,
@@ -195,8 +202,17 @@ export async function captureStages({
             phase,
             baseUrl,
             language,
+            outputPath: plannedOutputPath,
           });
-          outputs.push({ stageId: stage.id, screenId: screen.id, viewportId: viewport.id, outputPath });
+          outputs.push({
+            stageId: stage.id,
+            stageTitle: stage.title,
+            screenId: screen.id,
+            label: screen.label,
+            locale: inferLocale(screen),
+            viewportId: viewport.id,
+            outputPath,
+          });
           console.log(`captured ${stage.id}/${phase}/${screen.id} (${viewport.id})`);
         }
       }
@@ -206,4 +222,32 @@ export async function captureStages({
   }
 
   return outputs;
+}
+
+export async function captureStages({
+  config,
+  phase,
+  stageArg,
+  screenIds = [],
+  viewportIds = [],
+  baseUrlOverride,
+  language,
+}) {
+  const plan = resolveCapturePlan(config, {
+    stageArg,
+    screenIds,
+    viewportIds,
+  });
+
+  for (const { stage } of plan.selections) {
+    await ensureStageStructure(config, stage, language);
+  }
+
+  return captureResolvedPlan({
+    config,
+    phase,
+    selections: plan.selections,
+    baseUrlOverride,
+    language,
+  });
 }

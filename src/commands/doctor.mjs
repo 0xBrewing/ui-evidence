@@ -6,6 +6,7 @@ export async function handleDoctor(options) {
     config: options.config,
     beforeRef: options.beforeRef,
     deep: Boolean(options.deep),
+    scopeId: options.scope ?? null,
     stageArg: options.stage ?? 'all',
     screenIds: csvOption(options.screens),
   });

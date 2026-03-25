@@ -33,6 +33,18 @@ test('command-specific help is available through help <command>', async () => {
   }
 });
 
+test('snapshot help is available and mentions scope selection', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-help-snapshot-'));
+
+  try {
+    const result = await runCommand(`node "${BIN_PATH}" snapshot --help`, { cwd: tempDir });
+    assert.match(result.stdout, /ui-evidence snapshot/);
+    assert.match(result.stdout, /--scope <id>/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('unknown commands print a friendly error without a stack trace', () => {
   const result = spawnSync(process.execPath, [BIN_PATH, 'nonsense'], {
     encoding: 'utf8',

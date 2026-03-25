@@ -9,6 +9,7 @@ import { handleReview } from '../commands/review.mjs';
 import { handleDoctor } from '../commands/doctor.mjs';
 import { handleRun } from '../commands/run.mjs';
 import { handleSchema } from '../commands/schema.mjs';
+import { handleSnapshot } from '../commands/snapshot.mjs';
 
 function printTopHelp() {
   console.log(`ui-evidence
@@ -26,6 +27,7 @@ Commands:
   report    generate Markdown evidence and manifest files
   review    generate a local HTML review surface
   run       orchestrate capture + compare + report
+  snapshot  capture the current UI and build a snapshot review bundle
   schema    print schema path or schema JSON
   help      show this message
 
@@ -38,7 +40,8 @@ Examples:
   ui-evidence compare --stage entry-flows
   ui-evidence report --stage entry-flows --language ko
   ui-evidence review --stage entry-flows
-  ui-evidence run --stage entry-flows`);
+  ui-evidence run --stage entry-flows
+  ui-evidence snapshot --scope button-rollout`);
 }
 
 const commandHelp = {
@@ -69,7 +72,7 @@ Examples:
   doctor: `ui-evidence doctor
 
 Usage:
-  ui-evidence doctor [--config <path>] [--before-ref <ref>] [--deep] [--stage <id[,id...]>] [--screens <id[,id...]>] [--json]
+  ui-evidence doctor [--config <path>] [--before-ref <ref>] [--deep] [--scope <id>] [--stage <id[,id...]>] [--screens <id[,id...]>] [--json]
 
 Examples:
   ui-evidence doctor --config ui-evidence.config.yaml
@@ -105,6 +108,14 @@ Usage:
 
 Examples:
   ui-evidence review --stage primary-flow`,
+  snapshot: `ui-evidence snapshot
+
+Usage:
+  ui-evidence snapshot [--config <path>] [--scope <id>] [--stage <id[,id...]>|all] [--screens <id[,id...]>] [--viewports <id[,id...]>] [--base-url <url>] [--label <slug>] [--language <code>]
+
+Examples:
+  ui-evidence snapshot --scope design-system-rollout
+  ui-evidence snapshot --stage primary-flow --screens home,checkout --label current-ui`,
   run: `ui-evidence run
 
 Usage:
@@ -141,6 +152,7 @@ const commandHandlers = {
   report: handleReport,
   review: handleReview,
   run: handleRun,
+  snapshot: handleSnapshot,
   schema: handleSchema,
 };
 

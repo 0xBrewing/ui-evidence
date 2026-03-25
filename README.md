@@ -12,6 +12,7 @@ I built it after AI coding tools started changing the wrong UI or quietly skippi
 - compares `before` and `after` images
 - writes a local `review/index.html`
 - supports `main` or another git ref as the `before` baseline
+- captures the current UI into a history snapshot bundle when you only need human review
 - scaffolds repo-local bootstrap files after the skill or package is installed
 
 The package is the local CLI. The skill is the easiest install surface for Codex, Claude Code, and other `SKILL.md`-based clients.
@@ -136,6 +137,12 @@ Compare the current branch against `main`:
 pnpm exec ui-evidence run --config ./ui-evidence.config.yaml --stage primary-flow --before-ref main
 ```
 
+Capture the current UI only:
+
+```bash
+pnpm exec ui-evidence snapshot --config ./ui-evidence.config.yaml --scope design-system-rollout
+```
+
 Open:
 
 ```text
@@ -193,6 +200,14 @@ stages:
         path: /
         waitFor:
           testId: screen-home
+scopes:
+  - id: design-system-rollout
+    title: Design System Rollout
+    description: Current UI snapshot for touched and related screens.
+    targets:
+      - stageId: primary-flow
+        screenIds:
+          - home
 ```
 
 ## Output
@@ -206,6 +221,19 @@ screenshots/ui-evidence/<stage-id>/
   comparison/
     pairs/
     overview/
+  review/
+    index.html
+  notes.<lang>.md
+  report.<lang>.md
+  manifest.json
+```
+
+Snapshot runs write:
+
+```text
+screenshots/ui-evidence/snapshots/<run-id>/
+  captures/
+  overview/
   review/
     index.html
   notes.<lang>.md

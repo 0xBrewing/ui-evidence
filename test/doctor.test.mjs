@@ -136,6 +136,59 @@ stages:
   }
 });
 
+test('doctor validates named scope selections before deep checks', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-doctor-scope-'));
+
+  try {
+    await writeFile(
+      path.join(tempDir, 'ui-evidence.config.yaml'),
+      `version: 1
+project:
+  name: doctor-app
+  rootDir: .
+artifacts:
+  rootDir: screenshots/ui-evidence
+capture:
+  baseUrl: http://127.0.0.1:3000
+  browser:
+    headless: true
+  viewports:
+    - id: mobile-390
+      viewport:
+        width: 390
+        height: 844
+scopes:
+  - id: button-rollout
+    title: Button Rollout
+    description: Current UI snapshot for rollout screens.
+    targets:
+      - stageId: landing
+        screenIds:
+          - hero
+stages:
+  - id: landing
+    title: Landing
+    description: Landing page
+    screens:
+      - id: hero
+        label: Hero
+        path: /
+`,
+      'utf8',
+    );
+
+    const result = await runDoctor({
+      config: path.join(tempDir, 'ui-evidence.config.yaml'),
+      scopeId: 'button-rollout',
+    });
+
+    assert.equal(result.ok, true);
+    assert.ok(result.checks.some((check) => check.key === 'selection' && check.status === 'pass'));
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('doctor --deep validates the configured baseline ref even without --before-ref override', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-doctor-baseline-'));
   const runtime = await createServer('<main data-testid="screen-home">Home</main>');

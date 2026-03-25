@@ -89,6 +89,7 @@ Use the matching package-runner form of:
 ```bash
 ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id>
 ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id> --before-ref main
+ui-evidence snapshot --config ./ui-evidence.config.yaml --scope <scope-id>
 ```
 
 Return:
@@ -96,4 +97,4 @@ Return:
 - `review/index.html`
 - `report.<lang>.md`
 - `manifest.json`
-- important pair and overview images
+- important pair and overview images, or current snapshot captures and overview images

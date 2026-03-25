@@ -1,6 +1,6 @@
 ---
 name: ui-evidence
-description: Use when an agent needs to bootstrap ui-evidence in a repo, then discover, configure, or run before/after UI screenshot capture, local HTML review generation, or git-baseline UI evidence workflows for a web app.
+description: Use when an agent needs to bootstrap ui-evidence in a repo, then discover, configure, or run before/after UI screenshot capture, current UI snapshot capture, local HTML review generation, or git-baseline UI evidence workflows for a web app.
 ---
 
 # UI Evidence
@@ -9,6 +9,7 @@ Use this skill when the user wants an agent to:
 
 - bootstrap `ui-evidence` into the current repo
 - capture `before` and `after` UI screenshots
+- capture the current UI into a reviewable snapshot bundle
 - compare two UI states locally
 - generate a review page a human can scan quickly
 - persist a reusable config for future UI work
@@ -48,12 +49,12 @@ That bootstrap should leave repo-local skill copies in `.agents/skills/ui-eviden
 4. Create or patch `ui-evidence.config.yaml`.
 5. Add `ui-evidence/hooks/*` only if deterministic state is needed.
 6. Run `ui-evidence doctor`, then `ui-evidence doctor --deep` if route or wait-target confidence is still low.
-7. Run `ui-evidence run` or `capture/compare/report/review`.
+7. Run `ui-evidence run`, `ui-evidence snapshot`, or `capture/compare/report/review`.
 8. Summarize:
    - `review/index.html`
    - `report.<lang>.md`
    - `manifest.json`
-   - pair and overview images
+   - pair and overview images, or current snapshot captures and overview images
 
 ## Commands to prefer
 
@@ -63,6 +64,7 @@ ui-evidence init --interactive --config ./ui-evidence.config.yaml
 ui-evidence doctor --config ./ui-evidence.config.yaml
 ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id>
 ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id> --before-ref main
+ui-evidence snapshot --config ./ui-evidence.config.yaml --scope <scope-id>
 ui-evidence review --config ./ui-evidence.config.yaml --stage <stage-id>
 ```
 

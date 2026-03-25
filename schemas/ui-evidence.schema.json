@@ -79,6 +79,10 @@
         }
       }
     },
+    "scopes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/scope" }
+    },
     "stages": {
       "type": "array",
       "minItems": 1,
@@ -201,6 +205,38 @@
         "waitFor": { "$ref": "#/$defs/waitFor" },
         "hooks": { "$ref": "#/$defs/hooks" },
         "screenshot": { "$ref": "#/$defs/screenshot" }
+      }
+    },
+    "scopeTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stageId"],
+      "properties": {
+        "stageId": { "type": "string", "minLength": 1 },
+        "screenIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "description", "targets"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "defaultViewports": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/scopeTarget" }
+        }
       }
     },
     "stage": {

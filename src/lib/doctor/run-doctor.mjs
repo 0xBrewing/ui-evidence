@@ -8,7 +8,7 @@ import { startServer, stopServer } from '../server/process-server.mjs';
 import { loadHook } from '../util/hooks.mjs';
 import { fileExists } from '../util/fs.mjs';
 import { runCommandSync } from '../util/process.mjs';
-import { resolveBaseUrl, selectScreens, selectStages, selectViewports } from '../util/selection.mjs';
+import { resolveBaseUrl, resolveCapturePlan, selectViewports } from '../util/selection.mjs';
 
 async function probeUrl(url, timeoutMs = 3_000) {
   const controller = new AbortController();
@@ -41,6 +41,7 @@ async function runDeepPhaseValidation({
   checks,
   config,
   phase,
+  scopeId,
   stageArg,
   screenIds,
   baseUrlOverride,
@@ -67,12 +68,17 @@ async function runDeepPhaseValidation({
   }
 
   try {
-    const stages = selectStages(config, stageArg);
     const baseUrl = resolveBaseUrl(config, phase, baseUrlOverride);
-    for (const stage of stages) {
-      const viewport = selectViewports(config, stage, [])[0];
-      const selectedScreens = selectScreens(stage, screenIds);
-      for (const screen of selectedScreens) {
+    const plan = resolveCapturePlan(config, {
+      scopeId,
+      stageArg,
+      screenIds,
+      viewportIds: [],
+    });
+    for (const selection of plan.selections) {
+      const { stage, screens, viewports } = selection;
+      const viewport = viewports[0] ?? selectViewports(config, stage, [])[0];
+      for (const screen of screens) {
         const key = `deep:${phase}:${stage.id}/${screen.id}`;
         try {
           const { context } = await openPreparedScreen({
@@ -137,6 +143,26 @@ export async function runDoctor(options = {}) {
       ok: false,
       checks,
     };
+  }
+
+  let selectionOk = true;
+  try {
+    const selectionPlan = resolveCapturePlan(config, {
+      scopeId: options.scopeId ?? null,
+      stageArg: options.stageArg ?? 'all',
+      screenIds: options.screenIds ?? [],
+      viewportIds: [],
+    });
+    checks.push(makeCheck(
+      'selection',
+      'pass',
+      selectionPlan.scope
+        ? `Scope ${selectionPlan.scope.id} resolves to ${selectionPlan.selections.length} stage selection(s).`
+        : `Selected ${selectionPlan.selections.length} stage selection(s).`,
+    ));
+  } catch (error) {
+    selectionOk = false;
+    checks.push(makeCheck('selection', 'fail', error instanceof Error ? error.message : String(error)));
   }
 
   const urlChecks = uniqueUrls([
@@ -217,12 +243,13 @@ export async function runDoctor(options = {}) {
     }
   }
 
-  if (options.deep) {
+  if (options.deep && selectionOk) {
     const language = config.report?.language ?? config.artifacts.reportLanguage ?? 'en';
     await runDeepPhaseValidation({
       checks,
       config,
       phase: 'after',
+      scopeId: options.scopeId ?? null,
       stageArg: options.stageArg ?? 'all',
       screenIds: options.screenIds ?? [],
       baseUrlOverride: undefined,
@@ -246,6 +273,7 @@ export async function runDoctor(options = {}) {
             checks,
             config,
             phase: 'before',
+            scopeId: options.scopeId ?? null,
             stageArg: options.stageArg ?? 'all',
             screenIds: options.screenIds ?? [],
             baseUrlOverride: preparedBaseline.server.baseUrl,
