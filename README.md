@@ -2,9 +2,17 @@
 
 [한국어 README](./README.ko.md)
 
-`ui-evidence` is local before/after UI evidence for agent-driven changes. It captures stable screenshots, builds side-by-side comparisons, and generates a review page a human can scan quickly.
+> AI changed the UI. Review the evidence.
 
-I built it after AI coding tools started changing the wrong UI or quietly skipping screens during frontend work. It became useful immediately in a real design-system rollout because missing screens and inconsistent button updates were easy to spot.
+`ui-evidence` helps you review what AI actually changed in the UI. It captures stable before/after screenshots or current UI snapshots, builds side-by-side comparisons, and generates a local review page a human can scan quickly.
+
+I built it after AI coding tools started changing the wrong UI or quietly skipping related screens during frontend work. It became useful immediately in a real design-system rollout because missing screens and inconsistent button updates were easy to spot.
+
+## Why it exists
+
+- AI can touch the wrong UI while fixing a small frontend task.
+- AI can miss related screens during a design-system rollout.
+- Chat screenshots are a poor review surface when a human needs to scan multiple screens quickly.
 
 ## What it does
 
@@ -21,7 +29,7 @@ The package is the local CLI. The skill is the easiest install surface for Codex
 
 ### Archive ledger mobile button refresh
 
-This showcase captures a real mobile archive flow before and after a button design-system rollout. One run covers four screens, builds pair comparisons, and produces a review surface a human can scan quickly.
+This showcase captures a real mobile archive flow before and after a button design-system rollout. One run covers four related screens, builds pair comparisons, and produces a review surface a human can scan quickly.
 
 ![Archive ledger mobile overview](./docs/showcase/archive-ledger-mobile/comparison/overview/archive-ledger-mobile__mobile-390__overview.png)
 
