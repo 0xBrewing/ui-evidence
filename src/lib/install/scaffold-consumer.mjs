@@ -3,6 +3,14 @@ import { cp, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { discoverProject, formatSuggestedConfig } from '../discover/discover-project.mjs';
 import { ensureDir, fileExists, removeDir, toPosixPath } from '../util/fs.mjs';
+import {
+  DEFAULT_CONFIG_PATH,
+  DEFAULT_HOOKS_DIR,
+  DEFAULT_INSTALLATION_DOC_PATH,
+  assertNoLegacyLayoutConflict,
+  isDefaultConfigOption,
+  isDefaultInstallOption,
+} from '../layout/default-layout.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -115,7 +123,7 @@ function buildClaudeSection(tokens) {
 - If setup looks incomplete, read \`${tokens.LOCAL_INSTALL_DOC_PATH}\` and finish the setup.
 - For explicit runs, prefer the project command in \`.claude/commands/ui-evidence.md\`.
 - For natural-language requests about UI comparison or screenshots, use \`${tokens.UI_EVIDENCE_EXEC}\` instead of ad hoc browser steps.
-- Persist config in \`${tokens.CONFIG_PATH}\` and hooks in \`ui-evidence/hooks/*\`.
+- Persist config in \`${tokens.CONFIG_PATH}\` and hooks in \`${tokens.HOOKS_DIR}/*\`.
 - Return the final \`review/index.html\`, \`report\`, \`manifest\`, and key comparison image paths.`;
 }
 
@@ -132,13 +140,18 @@ function buildAgentsSection(tokens) {
 export async function scaffoldConsumerRepo(options = {}) {
   const cwd = path.resolve(options.cwd ?? process.cwd());
   const agent = normalizeAgent(options.agent);
-  const configPath = path.resolve(cwd, options.config ?? 'ui-evidence.config.yaml');
-  const installDocPath = path.resolve(cwd, options.installationDoc ?? path.join('docs', 'ui-evidence-installation.md'));
+  if (isDefaultConfigOption(cwd, options.config) && isDefaultInstallOption(cwd, options.installationDoc)) {
+    await assertNoLegacyLayoutConflict(cwd);
+  }
+
+  const configPath = path.resolve(cwd, options.config ?? DEFAULT_CONFIG_PATH);
+  const installDocPath = path.resolve(cwd, options.installationDoc ?? DEFAULT_INSTALLATION_DOC_PATH);
   const discovery = await discoverProject({ cwd });
   const tokens = {
     UI_EVIDENCE_EXEC: buildPackageExec(discovery.packageManager),
     CONFIG_PATH: toPosixPath(path.relative(cwd, configPath)),
     LOCAL_INSTALL_DOC_PATH: toPosixPath(path.relative(cwd, installDocPath)),
+    HOOKS_DIR: toPosixPath(DEFAULT_HOOKS_DIR),
   };
 
   const actions = [];

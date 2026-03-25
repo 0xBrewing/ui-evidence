@@ -1,0 +1,64 @@
+version: 1
+project:
+  name: vite-react-app
+  rootDir: ..
+artifacts:
+  rootDir: ui-evidence/screenshots
+  notesLanguage: en
+  reportLanguage: en
+  overviewViewport: mobile-390
+capture:
+  baseUrl: http://127.0.0.1:5173
+  browser:
+    headless: true
+    freezeAnimations: true
+    waitForFonts: true
+    waitForNetworkIdleMs: 1200
+  viewports:
+    - id: mobile-390
+      device: iPhone 13
+      viewport:
+        width: 390
+        height: 844
+      locale: en-US
+      timezoneId: UTC
+    - id: desktop-1440
+      viewport:
+        width: 1440
+        height: 1024
+      locale: en-US
+      timezoneId: UTC
+servers:
+  after:
+    command: pnpm dev
+    baseUrl: http://127.0.0.1:5173
+baseline:
+  git:
+    ref: main
+    worktreeDir: tmp/ui-evidence/main
+    installCommand: pnpm install --frozen-lockfile
+    server:
+      command: pnpm dev
+      baseUrl: http://127.0.0.1:5173
+      readyUrl: http://127.0.0.1:5173
+      timeoutMs: 90000
+report:
+  language: en
+  checklist:
+    - typography
+    - spacing
+    - interaction states
+stages:
+  - id: primary-flow
+    title: Primary Flow
+    description: Main route review.
+    defaultViewports:
+      - mobile-390
+      - desktop-1440
+    screens:
+      - id: home
+        fileId: home
+        label: Home
+        path: /
+        waitFor:
+          selector: body

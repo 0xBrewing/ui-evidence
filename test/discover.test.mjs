@@ -51,8 +51,11 @@ test('discoverProject infers preset, routes, and wait target candidates', async 
     assert.deepEqual(result.detected.routeCandidates.slice(0, 2), ['/', '/settings']);
     assert.ok(result.detected.testIds.includes('screen-home'));
     assert.equal(result.suggestedConfig.capture.baseUrl, 'http://127.0.0.1:4010');
+    assert.equal(result.suggestedConfig.project.rootDir, '..');
+    assert.equal(result.suggestedConfig.artifacts.rootDir, 'ui-evidence/screenshots');
     assert.equal(result.suggestedConfig.servers.after.command, 'pnpm dev');
     assert.equal(result.suggestedConfig.stages[0].screens[0].waitFor.testId, 'screen-home');
+    assert.equal(result.defaultConfigPath, 'ui-evidence/config.yaml');
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -183,6 +186,31 @@ test('discoverProject leaves low-confidence wait targets unresolved', async () =
     assert.equal(result.suggestedConfig.stages[0].screens[0].waitFor, undefined);
     assert.ok(result.unresolved.some((item) => item.key === 'wait-target'));
     assert.equal(result.detected.screenCandidates[0].confidence, 'low');
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('discoverProject warns when legacy root layout is still present', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-discover-legacy-'));
+
+  try {
+    await writeFile(
+      path.join(tempDir, 'package.json'),
+      JSON.stringify({
+        name: 'legacy-layout-app',
+        packageManager: 'pnpm@9.0.0',
+      }, null, 2),
+      'utf8',
+    );
+    await writeFile(path.join(tempDir, 'pnpm-lock.yaml'), 'lockfileVersion: 9.0\n', 'utf8');
+    await writeFile(path.join(tempDir, 'ui-evidence.config.yaml'), 'version: 1\n', 'utf8');
+
+    const result = await discoverProject({ cwd: tempDir });
+
+    assert.equal(result.existingConfig, 'ui-evidence.config.yaml');
+    assert.ok(result.warnings.some((item) => item.includes('Legacy ui-evidence paths detected')));
+    assert.ok(result.detected.legacyLayout.includes('ui-evidence.config.yaml'));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

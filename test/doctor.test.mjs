@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { runDoctor } from '../src/lib/doctor/run-doctor.mjs';
 
@@ -29,14 +29,15 @@ test('doctor --deep validates routes and wait targets without writing screenshot
   const runtime = await createServer('<main data-testid="screen-home">Home</main>');
 
   try {
+    await mkdir(path.join(tempDir, 'ui-evidence'), { recursive: true });
     await writeFile(
-      path.join(tempDir, 'ui-evidence.config.yaml'),
+      path.join(tempDir, 'ui-evidence', 'config.yaml'),
       `version: 1
 project:
   name: doctor-app
-  rootDir: .
+  rootDir: ..
 artifacts:
-  rootDir: screenshots/ui-evidence
+  rootDir: ui-evidence/screenshots
 capture:
   baseUrl: ${runtime.baseUrl}
   browser:
@@ -66,7 +67,7 @@ stages:
     );
 
     const result = await runDoctor({
-      config: path.join(tempDir, 'ui-evidence.config.yaml'),
+      config: path.join(tempDir, 'ui-evidence', 'config.yaml'),
       deep: true,
       stageArg: 'landing',
       screenIds: ['home'],
@@ -85,14 +86,15 @@ test('doctor --deep reports invalid wait targets as failures', async () => {
   const runtime = await createServer('<main data-testid="screen-home">Home</main>');
 
   try {
+    await mkdir(path.join(tempDir, 'ui-evidence'), { recursive: true });
     await writeFile(
-      path.join(tempDir, 'ui-evidence.config.yaml'),
+      path.join(tempDir, 'ui-evidence', 'config.yaml'),
       `version: 1
 project:
   name: doctor-app
-  rootDir: .
+  rootDir: ..
 artifacts:
-  rootDir: screenshots/ui-evidence
+  rootDir: ui-evidence/screenshots
 capture:
   baseUrl: ${runtime.baseUrl}
   browser:
@@ -122,7 +124,7 @@ stages:
     );
 
     const result = await runDoctor({
-      config: path.join(tempDir, 'ui-evidence.config.yaml'),
+      config: path.join(tempDir, 'ui-evidence', 'config.yaml'),
       deep: true,
       stageArg: 'landing',
       screenIds: ['home'],
@@ -140,14 +142,15 @@ test('doctor validates named scope selections before deep checks', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-doctor-scope-'));
 
   try {
+    await mkdir(path.join(tempDir, 'ui-evidence'), { recursive: true });
     await writeFile(
-      path.join(tempDir, 'ui-evidence.config.yaml'),
+      path.join(tempDir, 'ui-evidence', 'config.yaml'),
       `version: 1
 project:
   name: doctor-app
-  rootDir: .
+  rootDir: ..
 artifacts:
-  rootDir: screenshots/ui-evidence
+  rootDir: ui-evidence/screenshots
 capture:
   baseUrl: http://127.0.0.1:3000
   browser:
@@ -178,7 +181,7 @@ stages:
     );
 
     const result = await runDoctor({
-      config: path.join(tempDir, 'ui-evidence.config.yaml'),
+      config: path.join(tempDir, 'ui-evidence', 'config.yaml'),
       scopeId: 'button-rollout',
     });
 
@@ -216,14 +219,15 @@ test('doctor --deep validates the configured baseline ref even without --before-
       0,
     );
 
+    await mkdir(path.join(tempDir, 'ui-evidence'), { recursive: true });
     await writeFile(
-      path.join(tempDir, 'ui-evidence.config.yaml'),
+      path.join(tempDir, 'ui-evidence', 'config.yaml'),
       `version: 1
 project:
   name: doctor-app
-  rootDir: .
+  rootDir: ..
 artifacts:
-  rootDir: screenshots/ui-evidence
+  rootDir: ui-evidence/screenshots
 capture:
   baseUrl: ${runtime.baseUrl}
   browser:
@@ -258,7 +262,7 @@ stages:
     );
 
     const result = await runDoctor({
-      config: path.join(tempDir, 'ui-evidence.config.yaml'),
+      config: path.join(tempDir, 'ui-evidence', 'config.yaml'),
       deep: true,
       stageArg: 'landing',
       screenIds: ['home'],

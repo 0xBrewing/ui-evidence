@@ -7,29 +7,29 @@
     "description": "실데이터 기반 archive 및 dashboard compatibility history before-after 비교"
   },
   "artifacts": {
-    "notes": "screenshots/ui-evidence/archive-ledger-mobile/notes.ko.md",
-    "report": "screenshots/ui-evidence/archive-ledger-mobile/report.ko.md",
-    "review": "screenshots/ui-evidence/archive-ledger-mobile/review/index.html",
+    "notes": "ui-evidence/screenshots/archive-ledger-mobile/notes.ko.md",
+    "report": "ui-evidence/screenshots/archive-ledger-mobile/report.ko.md",
+    "review": "ui-evidence/screenshots/archive-ledger-mobile/review/index.html",
     "before": [
-      "screenshots/ui-evidence/archive-ledger-mobile/before/ara-chat-archive__ko__mobile-390__before.png",
-      "screenshots/ui-evidence/archive-ledger-mobile/before/compatibility-archive__ko__mobile-390__before.png",
-      "screenshots/ui-evidence/archive-ledger-mobile/before/daily-fortune-archive__ko__mobile-390__before.png",
-      "screenshots/ui-evidence/archive-ledger-mobile/before/dated-fortune-archive__ko__mobile-390__before.png"
+      "ui-evidence/screenshots/archive-ledger-mobile/before/ara-chat-archive__ko__mobile-390__before.png",
+      "ui-evidence/screenshots/archive-ledger-mobile/before/compatibility-archive__ko__mobile-390__before.png",
+      "ui-evidence/screenshots/archive-ledger-mobile/before/daily-fortune-archive__ko__mobile-390__before.png",
+      "ui-evidence/screenshots/archive-ledger-mobile/before/dated-fortune-archive__ko__mobile-390__before.png"
     ],
     "after": [
-      "screenshots/ui-evidence/archive-ledger-mobile/after/ara-chat-archive__ko__mobile-390__after.png",
-      "screenshots/ui-evidence/archive-ledger-mobile/after/compatibility-archive__ko__mobile-390__after.png",
-      "screenshots/ui-evidence/archive-ledger-mobile/after/daily-fortune-archive__ko__mobile-390__after.png",
-      "screenshots/ui-evidence/archive-ledger-mobile/after/dated-fortune-archive__ko__mobile-390__after.png"
+      "ui-evidence/screenshots/archive-ledger-mobile/after/ara-chat-archive__ko__mobile-390__after.png",
+      "ui-evidence/screenshots/archive-ledger-mobile/after/compatibility-archive__ko__mobile-390__after.png",
+      "ui-evidence/screenshots/archive-ledger-mobile/after/daily-fortune-archive__ko__mobile-390__after.png",
+      "ui-evidence/screenshots/archive-ledger-mobile/after/dated-fortune-archive__ko__mobile-390__after.png"
     ],
     "pairs": [
-      "screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/ara-chat-archive__ko__mobile-390__compare.png",
-      "screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/compatibility-archive__ko__mobile-390__compare.png",
-      "screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/daily-fortune-archive__ko__mobile-390__compare.png",
-      "screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/dated-fortune-archive__ko__mobile-390__compare.png"
+      "ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/ara-chat-archive__ko__mobile-390__compare.png",
+      "ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/compatibility-archive__ko__mobile-390__compare.png",
+      "ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/daily-fortune-archive__ko__mobile-390__compare.png",
+      "ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/dated-fortune-archive__ko__mobile-390__compare.png"
     ],
     "overviews": [
-      "screenshots/ui-evidence/archive-ledger-mobile/comparison/overview/archive-ledger-mobile__mobile-390__overview.png"
+      "ui-evidence/screenshots/archive-ledger-mobile/comparison/overview/archive-ledger-mobile__mobile-390__overview.png"
     ]
   },
   "captures": [
@@ -39,9 +39,9 @@
       "label": "오늘의 운세 기록",
       "locale": "ko",
       "viewportId": "mobile-390",
-      "before": "screenshots/ui-evidence/archive-ledger-mobile/before/daily-fortune-archive__ko__mobile-390__before.png",
-      "after": "screenshots/ui-evidence/archive-ledger-mobile/after/daily-fortune-archive__ko__mobile-390__after.png",
-      "pair": "screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/daily-fortune-archive__ko__mobile-390__compare.png",
+      "before": "ui-evidence/screenshots/archive-ledger-mobile/before/daily-fortune-archive__ko__mobile-390__before.png",
+      "after": "ui-evidence/screenshots/archive-ledger-mobile/after/daily-fortune-archive__ko__mobile-390__after.png",
+      "pair": "ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/daily-fortune-archive__ko__mobile-390__compare.png",
       "status": "complete"
     },
     {
@@ -50,9 +50,9 @@
       "label": "날짜별 운세 기록",
       "locale": "ko",
       "viewportId": "mobile-390",
-      "before": "screenshots/ui-evidence/archive-ledger-mobile/before/dated-fortune-archive__ko__mobile-390__before.png",
-      "after": "screenshots/ui-evidence/archive-ledger-mobile/after/dated-fortune-archive__ko__mobile-390__after.png",
-      "pair": "screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/dated-fortune-archive__ko__mobile-390__compare.png",
+      "before": "ui-evidence/screenshots/archive-ledger-mobile/before/dated-fortune-archive__ko__mobile-390__before.png",
+      "after": "ui-evidence/screenshots/archive-ledger-mobile/after/dated-fortune-archive__ko__mobile-390__after.png",
+      "pair": "ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/dated-fortune-archive__ko__mobile-390__compare.png",
       "status": "complete"
     },
     {
@@ -61,9 +61,9 @@
       "label": "궁합 기록",
       "locale": "ko",
       "viewportId": "mobile-390",
-      "before": "screenshots/ui-evidence/archive-ledger-mobile/before/compatibility-archive__ko__mobile-390__before.png",
-      "after": "screenshots/ui-evidence/archive-ledger-mobile/after/compatibility-archive__ko__mobile-390__after.png",
-      "pair": "screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/compatibility-archive__ko__mobile-390__compare.png",
+      "before": "ui-evidence/screenshots/archive-ledger-mobile/before/compatibility-archive__ko__mobile-390__before.png",
+      "after": "ui-evidence/screenshots/archive-ledger-mobile/after/compatibility-archive__ko__mobile-390__after.png",
+      "pair": "ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/compatibility-archive__ko__mobile-390__compare.png",
       "status": "complete"
     },
     {
@@ -72,9 +72,9 @@
       "label": "아라와 대화 기록",
       "locale": "ko",
       "viewportId": "mobile-390",
-      "before": "screenshots/ui-evidence/archive-ledger-mobile/before/ara-chat-archive__ko__mobile-390__before.png",
-      "after": "screenshots/ui-evidence/archive-ledger-mobile/after/ara-chat-archive__ko__mobile-390__after.png",
-      "pair": "screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/ara-chat-archive__ko__mobile-390__compare.png",
+      "before": "ui-evidence/screenshots/archive-ledger-mobile/before/ara-chat-archive__ko__mobile-390__before.png",
+      "after": "ui-evidence/screenshots/archive-ledger-mobile/after/ara-chat-archive__ko__mobile-390__after.png",
+      "pair": "ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/ara-chat-archive__ko__mobile-390__compare.png",
       "status": "complete"
     }
   ],

@@ -1,0 +1,56 @@
+version: 1
+project:
+  name: storybook-app
+  rootDir: ..
+artifacts:
+  rootDir: ui-evidence/screenshots
+  notesLanguage: en
+  reportLanguage: en
+  overviewViewport: desktop-1440
+capture:
+  baseUrl: http://127.0.0.1:6006
+  browser:
+    headless: true
+    freezeAnimations: true
+    waitForFonts: true
+    waitForNetworkIdleMs: 1000
+  viewports:
+    - id: desktop-1440
+      viewport:
+        width: 1440
+        height: 1024
+      locale: en-US
+      timezoneId: UTC
+servers:
+  after:
+    command: pnpm storybook
+    baseUrl: http://127.0.0.1:6006
+baseline:
+  git:
+    ref: main
+    worktreeDir: tmp/ui-evidence/main
+    installCommand: pnpm install --frozen-lockfile
+    server:
+      command: pnpm storybook
+      baseUrl: http://127.0.0.1:6006
+      readyUrl: http://127.0.0.1:6006
+      timeoutMs: 120000
+report:
+  language: en
+  checklist:
+    - component layout
+    - typography
+    - edge-state regressions
+stages:
+  - id: storybook-canvas
+    title: Storybook Canvas
+    description: Canvas view review for a stable story route.
+    defaultViewports:
+      - desktop-1440
+    screens:
+      - id: component-story
+        fileId: component-story
+        label: Component Story
+        path: /?path=/story/example-button--primary
+        waitFor:
+          selector: "#storybook-root"

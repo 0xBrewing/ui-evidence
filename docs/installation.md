@@ -43,10 +43,10 @@ bun add -d github:0xBrewing/ui-evidence
 4. Run the repo-local bootstrap step:
 
 ```bash
-pnpm exec ui-evidence install --agent both --config ./ui-evidence.config.yaml
-npx ui-evidence install --agent both --config ./ui-evidence.config.yaml
-yarn ui-evidence install --agent both --config ./ui-evidence.config.yaml
-bunx ui-evidence install --agent both --config ./ui-evidence.config.yaml
+pnpm exec ui-evidence install --agent both --config ./ui-evidence/config.yaml
+npx ui-evidence install --agent both --config ./ui-evidence/config.yaml
+yarn ui-evidence install --agent both --config ./ui-evidence/config.yaml
+bunx ui-evidence install --agent both --config ./ui-evidence/config.yaml
 ```
 
 This bootstrap should leave agent-recognized local skill copies in:
@@ -54,12 +54,12 @@ This bootstrap should leave agent-recognized local skill copies in:
 - `.agents/skills/ui-evidence/` for Codex and other `.agents` clients
 - `.claude/skills/ui-evidence/` for Claude Code
 
-5. Read `docs/ui-evidence-installation.md` if it was generated.
+5. Read `ui-evidence/installation.md` if it was generated.
 6. Run the matching package-runner form of:
 
 ```bash
-ui-evidence doctor --config ./ui-evidence.config.yaml
-ui-evidence doctor --config ./ui-evidence.config.yaml --deep
+ui-evidence doctor --config ./ui-evidence/config.yaml
+ui-evidence doctor --config ./ui-evidence/config.yaml --deep
 ```
 
 Use the native package runner when needed:
@@ -79,7 +79,7 @@ Use the native package runner when needed:
 ## Rules
 
 - Prefer the installed `ui-evidence` skill over ad hoc browser steps.
-- Persist config in `ui-evidence.config.yaml`.
+- Persist config in `ui-evidence/config.yaml`.
 - Create hooks only when route + wait target cannot reach the desired state.
 - Keep the first setup minimal. One stage and one stable screen is enough.
 
@@ -88,10 +88,10 @@ Use the native package runner when needed:
 Use the matching package-runner form of:
 
 ```bash
-ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id>
-ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id> --before-ref main
-ui-evidence run --config ./ui-evidence.config.yaml --stage <stage-id> --after-attach http://127.0.0.1:3000 --resume
-ui-evidence snapshot --config ./ui-evidence.config.yaml --scope <scope-id>
+ui-evidence run --config ./ui-evidence/config.yaml --stage <stage-id>
+ui-evidence run --config ./ui-evidence/config.yaml --stage <stage-id> --before-ref main
+ui-evidence run --config ./ui-evidence/config.yaml --stage <stage-id> --after-attach http://127.0.0.1:3000 --resume
+ui-evidence snapshot --config ./ui-evidence/config.yaml --scope <scope-id>
 ```
 
 Return:

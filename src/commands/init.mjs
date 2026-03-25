@@ -4,6 +4,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import { createInterface } from 'node:readline/promises';
 import { ensureDir, fileExists } from '../lib/util/fs.mjs';
 import { discoverProject, formatSuggestedConfig } from '../lib/discover/discover-project.mjs';
+import { DEFAULT_CONFIG_PATH, assertNoLegacyLayoutConflict, isDefaultConfigOption } from '../lib/layout/default-layout.mjs';
 
 async function promptWithDefault(rl, label, defaultValue) {
   const suffix = defaultValue ? ` [${defaultValue}]` : '';
@@ -70,12 +71,17 @@ async function buildInteractiveConfig(discovery) {
 }
 
 export async function handleInit(options) {
-  const configPath = path.resolve(process.cwd(), options.config ?? 'ui-evidence.config.yaml');
+  const cwd = process.cwd();
+  if (isDefaultConfigOption(cwd, options.config)) {
+    await assertNoLegacyLayoutConflict(cwd);
+  }
+
+  const configPath = path.resolve(cwd, options.config ?? DEFAULT_CONFIG_PATH);
   if ((await fileExists(configPath)) && !options.force) {
     throw new Error(`Config already exists at "${configPath}". Use --force to overwrite.`);
   }
 
-  const discovery = await discoverProject({ cwd: process.cwd() });
+  const discovery = await discoverProject({ cwd });
   const config = options.interactive && input.isTTY && output.isTTY
     ? await buildInteractiveConfig(discovery)
     : discovery.suggestedConfig;
@@ -85,5 +91,5 @@ export async function handleInit(options) {
 
   console.log(`created ${configPath}`);
   console.log(`preset: ${discovery.preset}`);
-  console.log(`next: ui-evidence doctor --config ${path.relative(process.cwd(), configPath)}`);
+  console.log(`next: ui-evidence doctor --config ${path.relative(cwd, configPath)}`);
 }

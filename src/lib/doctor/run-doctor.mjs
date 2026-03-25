@@ -4,6 +4,7 @@ import { loadConfig, resolveProjectPath } from '../../config/load-config.mjs';
 import { openPreparedScreen } from '../capture/playwright-capture.mjs';
 import { discoverProject } from '../discover/discover-project.mjs';
 import { resolveBaselineOptions, prepareGitBaseline } from '../baseline/git-baseline.mjs';
+import { DEFAULT_CONFIG_PATH, detectLegacyLayout, formatLegacyLayoutWarning } from '../layout/default-layout.mjs';
 import { resolveServerSpec, startServer, stopServer } from '../server/process-server.mjs';
 import { loadHook } from '../util/hooks.mjs';
 import { fileExists } from '../util/fs.mjs';
@@ -106,8 +107,9 @@ async function runDeepPhaseValidation({
 
 export async function runDoctor(options = {}) {
   const checks = [];
-  const configPath = options.config ?? 'ui-evidence.config.yaml';
+  const configPath = options.config ?? DEFAULT_CONFIG_PATH;
   const configExists = await fileExists(path.resolve(process.cwd(), configPath));
+  const legacyPaths = await detectLegacyLayout(process.cwd());
 
   checks.push(makeCheck(
     'node-version',
@@ -121,6 +123,10 @@ export async function runDoctor(options = {}) {
     checks.push(makeCheck('playwright-chromium', 'pass', 'Playwright Chromium is available.'));
   } catch (error) {
     checks.push(makeCheck('playwright-chromium', 'fail', error instanceof Error ? error.message : String(error)));
+  }
+
+  if (legacyPaths.length) {
+    checks.push(makeCheck('layout', 'warn', formatLegacyLayoutWarning(legacyPaths)));
   }
 
   if (!configExists) {

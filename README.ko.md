@@ -102,9 +102,9 @@ Use ui-evidence to compare the checkout modal against main.
 
 ```bash
 pnpm add -D github:0xBrewing/ui-evidence
-pnpm exec ui-evidence install --agent both --config ./ui-evidence.config.yaml
-pnpm exec ui-evidence doctor --config ./ui-evidence.config.yaml
-pnpm exec ui-evidence doctor --config ./ui-evidence.config.yaml --deep
+pnpm exec ui-evidence install --agent both --config ./ui-evidence/config.yaml
+pnpm exec ui-evidence doctor --config ./ui-evidence/config.yaml
+pnpm exec ui-evidence doctor --config ./ui-evidence/config.yaml --deep
 ```
 
 동등한 설치 명령:
@@ -139,31 +139,31 @@ Read node_modules/ui-evidence/docs/installation.md and set up ui-evidence for th
 한 stage 실행:
 
 ```bash
-pnpm exec ui-evidence run --config ./ui-evidence.config.yaml --stage primary-flow
+pnpm exec ui-evidence run --config ./ui-evidence/config.yaml --stage primary-flow
 ```
 
 현재 브랜치를 `main` 과 비교:
 
 ```bash
-pnpm exec ui-evidence run --config ./ui-evidence.config.yaml --stage primary-flow --before-ref main
+pnpm exec ui-evidence run --config ./ui-evidence/config.yaml --stage primary-flow --before-ref main
 ```
 
 이미 실행 중인 앱에 attach 해서 실패하거나 누락된 raw 캡처만 재시도:
 
 ```bash
-pnpm exec ui-evidence run --config ./ui-evidence.config.yaml --stage primary-flow --after-attach http://127.0.0.1:3000 --resume
+pnpm exec ui-evidence run --config ./ui-evidence/config.yaml --stage primary-flow --after-attach http://127.0.0.1:3000 --resume
 ```
 
 현재 UI만 캡처:
 
 ```bash
-pnpm exec ui-evidence snapshot --config ./ui-evidence.config.yaml --scope design-system-rollout
+pnpm exec ui-evidence snapshot --config ./ui-evidence/config.yaml --scope design-system-rollout
 ```
 
 열어볼 경로:
 
 ```text
-screenshots/ui-evidence/<stage-id>/review/index.html
+ui-evidence/screenshots/<stage-id>/review/index.html
 ```
 
 ## 자주 쓰는 프롬프트
@@ -188,9 +188,9 @@ Claude plugin mirror 는 `prepare` 단계에서 canonical skill source 로부터
 version: 1
 project:
   name: my-app
-  rootDir: .
+  rootDir: ..
 artifacts:
-  rootDir: screenshots/ui-evidence
+  rootDir: ui-evidence/screenshots
 capture:
   baseUrl: http://127.0.0.1:3000
   browser:
@@ -232,7 +232,7 @@ scopes:
 각 stage 는 아래를 생성합니다.
 
 ```text
-screenshots/ui-evidence/<stage-id>/
+ui-evidence/screenshots/<stage-id>/
   before/
   after/
   comparison/
@@ -248,7 +248,7 @@ screenshots/ui-evidence/<stage-id>/
 snapshot 실행은 아래를 생성합니다.
 
 ```text
-screenshots/ui-evidence/snapshots/<run-id>/
+ui-evidence/screenshots/snapshots/<run-id>/
   captures/
   overview/
   review/
@@ -261,7 +261,7 @@ screenshots/ui-evidence/snapshots/<run-id>/
 ## 먼저 읽어볼 파일
 
 - [docs/installation.md](./docs/installation.md)
-- [examples/generic-web/ui-evidence.config.yaml](./examples/generic-web/ui-evidence.config.yaml)
+- [examples/generic-web/ui-evidence/config.yaml](./examples/generic-web/ui-evidence/config.yaml)
 - [skills/ui-evidence/SKILL.md](./skills/ui-evidence/SKILL.md)
 
 ## 기여

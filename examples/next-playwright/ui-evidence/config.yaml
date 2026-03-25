@@ -1,0 +1,82 @@
+version: 1
+project:
+  name: example-next-web
+  rootDir: ..
+artifacts:
+  rootDir: ui-evidence/screenshots
+  notesLanguage: ko
+  reportLanguage: ko
+  overviewViewport: mobile-390
+capture:
+  baseUrl: http://localhost:3100
+  browser:
+    headless: true
+    freezeAnimations: true
+    waitForFonts: true
+    waitForNetworkIdleMs: 2000
+  viewports:
+    - id: mobile-390
+      device: iPhone 13
+      viewport:
+        width: 390
+        height: 844
+      locale: ko-KR
+      timezoneId: Asia/Seoul
+    - id: mobile-430
+      device: iPhone 13
+      viewport:
+        width: 430
+        height: 932
+      locale: ko-KR
+      timezoneId: Asia/Seoul
+servers:
+  after:
+    baseUrl: http://localhost:3100
+    command: pnpm dev
+baseline:
+  git:
+    ref: main
+    worktreeDir: tmp/ui-evidence/main
+    installCommand: pnpm install --frozen-lockfile
+    server:
+      command: pnpm dev
+      baseUrl: http://localhost:3100
+      readyUrl: http://localhost:3100
+      timeoutMs: 90000
+report:
+  language: ko
+  checklist:
+    - button height
+    - font weight
+    - border radius
+    - spacing
+stages:
+  - id: entry-flows
+    title: Entry Flows
+    description: Landing and onboarding routes.
+    defaultViewports:
+      - mobile-390
+      - mobile-430
+    screens:
+      - id: landing
+        fileId: landing
+        label: Landing
+        path: /ko
+        waitFor:
+          testId: screen-landing-entry
+      - id: onboarding-step-1
+        label: Onboarding Step 1
+        path: /ko/onboarding
+        auth:
+          storageState: .playwright/.auth/profile-user.json
+          bootstrapRequest:
+            url: /api/test-auth/login
+            method: POST
+            headers:
+              x-e2e-secret: test-secret
+            json:
+              userKey: e2e-profile-user
+        waitFor:
+          testId: state-onboarding-message
+        hooks:
+          setup: ./hooks/capture-flag.mjs#default

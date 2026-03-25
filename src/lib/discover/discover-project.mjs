@@ -4,12 +4,20 @@ import path from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { directoryExists, fileExists, toPosixPath } from '../util/fs.mjs';
 import { runCommandSync } from '../util/process.mjs';
+import {
+  DEFAULT_ARTIFACTS_ROOT,
+  DEFAULT_CONFIG_PATH,
+  buildCanonicalSuggestedConfig,
+  detectExistingConfigPath,
+  detectLegacyLayout,
+  formatLegacyLayoutWarning,
+} from '../layout/default-layout.mjs';
 
 const CODE_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.html'];
 const CONFIG_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.mts', '.cts'];
 const ROUTE_FILE_PATTERNS = new Set(['page', 'index']);
 const SERVER_SCRIPT_KINDS = ['dev', 'start', 'preview', 'storybook'];
-const WALK_SKIP_DIRS = new Set(['.git', 'node_modules', 'dist', 'build', 'coverage', 'tmp', 'artifacts', 'screenshots']);
+const WALK_SKIP_DIRS = new Set(['.git', 'node_modules', 'dist', 'build', 'coverage', 'tmp', 'artifacts', 'screenshots', 'ui-evidence']);
 const DEFAULT_VIEWPORTS = [
   {
     id: 'mobile-390',
@@ -890,10 +898,10 @@ function buildSuggestedConfig({
     version: 1,
     project: {
       name: selectedPackage.packageJson.name ?? path.basename(selectedPackage.rootDir),
-      rootDir: '.',
+      rootDir: '..',
     },
     artifacts: {
-      rootDir: 'screenshots/ui-evidence',
+      rootDir: DEFAULT_ARTIFACTS_ROOT,
       notesLanguage: 'en',
       reportLanguage: 'en',
       overviewViewport: 'mobile-390',
@@ -956,7 +964,7 @@ function buildSuggestedConfig({
     };
   }
 
-  return config;
+  return buildCanonicalSuggestedConfig(config);
 }
 
 function buildUnresolved({ serverCommand, screenSuggestion, baselineRef }) {
@@ -1035,6 +1043,7 @@ export async function discoverProject(options = {}) {
   const testIds = selectedPackage.testIdEntries.map((entry) => entry.id);
   const screenSuggestion = buildScreenSuggestion(selectedPackage.routeEntries, selectedPackage.testIdEntries, preset);
   const baselineRef = detectGitBaselineRef(cwd);
+  const legacyPaths = await detectLegacyLayout(cwd);
   const suggestedConfig = buildSuggestedConfig({
     cwd,
     packageManager,
@@ -1045,6 +1054,7 @@ export async function discoverProject(options = {}) {
     serverCommand,
     screenSuggestion,
   });
+  const warnings = legacyPaths.length ? [formatLegacyLayoutWarning(legacyPaths)] : [];
 
   return {
     version: 1,
@@ -1052,7 +1062,9 @@ export async function discoverProject(options = {}) {
     preset,
     packageManager,
     frameworks: selectedPackage.frameworks,
-    existingConfig: (await fileExists(path.join(cwd, 'ui-evidence.config.yaml'))) ? 'ui-evidence.config.yaml' : null,
+    existingConfig: await detectExistingConfigPath(cwd),
+    defaultConfigPath: DEFAULT_CONFIG_PATH,
+    warnings,
     detected: {
       scripts: rootCandidate.scripts,
       routeCandidates,
@@ -1072,6 +1084,7 @@ export async function discoverProject(options = {}) {
         webServerCommand: playwrightHints.webServerCommand,
       },
       screenCandidates: screenSuggestion.screenCandidates,
+      legacyLayout: legacyPaths,
     },
     unresolved: buildUnresolved({
       serverCommand,

@@ -24,18 +24,18 @@
 - mobile consistency
 
 ## 참고 경로
-- notes: `screenshots/ui-evidence/archive-ledger-mobile/notes.ko.md`
-- manifest: `screenshots/ui-evidence/archive-ledger-mobile/manifest.json`
-- review: `screenshots/ui-evidence/archive-ledger-mobile/review/index.html`
+- notes: `ui-evidence/screenshots/archive-ledger-mobile/notes.ko.md`
+- manifest: `ui-evidence/screenshots/archive-ledger-mobile/manifest.json`
+- review: `ui-evidence/screenshots/archive-ledger-mobile/review/index.html`
 
 ## 비교 이미지
-- `screenshots/ui-evidence/archive-ledger-mobile/comparison/overview/archive-ledger-mobile__mobile-390__overview.png`
+- `ui-evidence/screenshots/archive-ledger-mobile/comparison/overview/archive-ledger-mobile__mobile-390__overview.png`
 
 ## pair 이미지
-- `screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/ara-chat-archive__ko__mobile-390__compare.png`
-- `screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/compatibility-archive__ko__mobile-390__compare.png`
-- `screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/daily-fortune-archive__ko__mobile-390__compare.png`
-- `screenshots/ui-evidence/archive-ledger-mobile/comparison/pairs/dated-fortune-archive__ko__mobile-390__compare.png`
+- `ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/ara-chat-archive__ko__mobile-390__compare.png`
+- `ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/compatibility-archive__ko__mobile-390__compare.png`
+- `ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/daily-fortune-archive__ko__mobile-390__compare.png`
+- `ui-evidence/screenshots/archive-ledger-mobile/comparison/pairs/dated-fortune-archive__ko__mobile-390__compare.png`
 
 ## 비고
 - 상세 관찰과 서술형 리뷰는 notes 파일에 이어서 기록하세요.

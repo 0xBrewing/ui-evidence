@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { handleRun } from '../src/commands/run.mjs';
 import { loadConfig } from '../src/config/load-config.mjs';
 import { captureStages } from '../src/lib/capture/playwright-capture.mjs';
@@ -46,9 +46,9 @@ function buildConfig(baseUrl) {
   return `version: 1
 project:
   name: resume-app
-  rootDir: .
+  rootDir: ..
 artifacts:
-  rootDir: screenshots/ui-evidence
+  rootDir: ui-evidence/screenshots
   notesLanguage: en
   reportLanguage: en
 capture:
@@ -88,11 +88,12 @@ test('handleRun uses afterAttach overrides and skips successful captures on resu
   const bogusBaseUrl = 'http://127.0.0.1:1';
 
   try {
-    await writeFile(path.join(tempDir, 'ui-evidence.config.yaml'), buildConfig(bogusBaseUrl), 'utf8');
+    await mkdir(path.join(tempDir, 'ui-evidence'), { recursive: true });
+    await writeFile(path.join(tempDir, 'ui-evidence', 'config.yaml'), buildConfig(bogusBaseUrl), 'utf8');
 
     process.exitCode = undefined;
     await handleRun({
-      config: path.join(tempDir, 'ui-evidence.config.yaml'),
+      config: path.join(tempDir, 'ui-evidence', 'config.yaml'),
       stage: 'landing',
       skipBefore: true,
       skipCompare: true,
@@ -103,13 +104,13 @@ test('handleRun uses afterAttach overrides and skips successful captures on resu
 
     const screenshotPath = path.join(
       tempDir,
-      'screenshots',
       'ui-evidence',
+      'screenshots',
       'landing',
       'after',
       'home__default__mobile-390__after.png',
     );
-    const captureStatePath = path.join(tempDir, 'screenshots', 'ui-evidence', 'landing', 'capture-state.json');
+    const captureStatePath = path.join(tempDir, 'ui-evidence', 'screenshots', 'landing', 'capture-state.json');
     const captureState = await readJson(captureStatePath);
 
     assert.equal(process.exitCode ?? 0, 0);
@@ -120,7 +121,7 @@ test('handleRun uses afterAttach overrides and skips successful captures on resu
 
     process.exitCode = undefined;
     await handleRun({
-      config: path.join(tempDir, 'ui-evidence.config.yaml'),
+      config: path.join(tempDir, 'ui-evidence', 'config.yaml'),
       stage: 'landing',
       skipBefore: true,
       skipCompare: true,
@@ -144,10 +145,11 @@ test('failed captures write diagnostics and resume retries only failed entries',
   const runtime = await createDynamicServer();
 
   try {
-    await writeFile(path.join(tempDir, 'ui-evidence.config.yaml'), buildConfig(runtime.baseUrl), 'utf8');
+    await mkdir(path.join(tempDir, 'ui-evidence'), { recursive: true });
+    await writeFile(path.join(tempDir, 'ui-evidence', 'config.yaml'), buildConfig(runtime.baseUrl), 'utf8');
     runtime.state.screenHtml = '<main data-testid="screen-other">Wrong screen</main>';
 
-    const config = await loadConfig(path.join(tempDir, 'ui-evidence.config.yaml'));
+    const config = await loadConfig(path.join(tempDir, 'ui-evidence', 'config.yaml'));
     const failedCapture = await captureStages({
       config,
       phase: 'after',
@@ -164,8 +166,8 @@ test('failed captures write diagnostics and resume retries only failed entries',
       language: 'en',
     });
 
-    const manifestPath = path.join(tempDir, 'screenshots', 'ui-evidence', 'landing', 'manifest.json');
-    const reviewPath = path.join(tempDir, 'screenshots', 'ui-evidence', 'landing', 'review', 'index.html');
+    const manifestPath = path.join(tempDir, 'ui-evidence', 'screenshots', 'landing', 'manifest.json');
+    const reviewPath = path.join(tempDir, 'ui-evidence', 'screenshots', 'landing', 'review', 'index.html');
     const manifest = await readJson(manifestPath);
     const reviewHtml = await readFile(reviewPath, 'utf8');
 

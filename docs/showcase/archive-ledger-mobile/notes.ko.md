@@ -44,11 +44,11 @@
   - `pnpm --filter @saju/api test -- daily-fortune-history.e2e-spec.ts`
   - `pnpm test:e2e:web:layout`
   - `pnpm test:e2e:web:mobile`
-  - `pnpm exec ui-evidence doctor --config ./ui-evidence.config.yaml`
-  - `pnpm exec ui-evidence capture --config ./ui-evidence.config.yaml --stage archive-ledger-mobile --phase after`
-  - `pnpm exec ui-evidence compare --config ./ui-evidence.config.yaml --stage archive-ledger-mobile`
-  - `pnpm exec ui-evidence report --config ./ui-evidence.config.yaml --stage archive-ledger-mobile --language ko`
-  - `pnpm exec ui-evidence review --config ./ui-evidence.config.yaml --stage archive-ledger-mobile --language ko`
+  - `pnpm exec ui-evidence doctor --config ./ui-evidence/config.yaml`
+  - `pnpm exec ui-evidence capture --config ./ui-evidence/config.yaml --stage archive-ledger-mobile --phase after`
+  - `pnpm exec ui-evidence compare --config ./ui-evidence/config.yaml --stage archive-ledger-mobile`
+  - `pnpm exec ui-evidence report --config ./ui-evidence/config.yaml --stage archive-ledger-mobile --language ko`
+  - `pnpm exec ui-evidence review --config ./ui-evidence/config.yaml --stage archive-ledger-mobile --language ko`
 - 결과:
   - before 4장, after 4장, pair 4장, overview 1장 생성 완료
   - 모바일 공식 회귀와 layout subset 통과

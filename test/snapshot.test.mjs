@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { loadConfig } from '../src/config/load-config.mjs';
 import { runSnapshot } from '../src/lib/snapshot/run-snapshot.mjs';
 import { readJson } from '../src/lib/util/fs.mjs';
@@ -35,14 +35,15 @@ test('runSnapshot captures a named scope into a history run bundle', async () =>
   });
 
   try {
+    await mkdir(path.join(tempDir, 'ui-evidence'), { recursive: true });
     await writeFile(
-      path.join(tempDir, 'ui-evidence.config.yaml'),
+      path.join(tempDir, 'ui-evidence', 'config.yaml'),
       `version: 1
 project:
   name: snapshot-app
-  rootDir: .
+  rootDir: ..
 artifacts:
-  rootDir: screenshots/ui-evidence
+  rootDir: ui-evidence/screenshots
   notesLanguage: en
   reportLanguage: en
 capture:
@@ -110,7 +111,7 @@ stages:
       'utf8',
     );
 
-    const config = await loadConfig(path.join(tempDir, 'ui-evidence.config.yaml'));
+    const config = await loadConfig(path.join(tempDir, 'ui-evidence', 'config.yaml'));
     const result = await runSnapshot({
       config,
       scopeId: 'button-rollout',
@@ -119,8 +120,8 @@ stages:
       now: new Date('2026-03-25T12:34:56Z'),
     });
 
-    const manifest = await readJson(path.join(tempDir, 'screenshots', 'ui-evidence', 'snapshots', result.runId, 'manifest.json'));
-    const reviewHtml = await readFile(path.join(tempDir, 'screenshots', 'ui-evidence', 'snapshots', result.runId, 'review', 'index.html'), 'utf8');
+    const manifest = await readJson(path.join(tempDir, 'ui-evidence', 'screenshots', 'snapshots', result.runId, 'manifest.json'));
+    const reviewHtml = await readFile(path.join(tempDir, 'ui-evidence', 'screenshots', 'snapshots', result.runId, 'review', 'index.html'), 'utf8');
 
     assert.equal(result.runId, '20260325-123456--buttons');
     assert.equal(manifest.kind, 'snapshot-run');
@@ -143,14 +144,15 @@ test('runSnapshot rejects mixed scope and stage selection', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-snapshot-error-'));
 
   try {
+    await mkdir(path.join(tempDir, 'ui-evidence'), { recursive: true });
     await writeFile(
-      path.join(tempDir, 'ui-evidence.config.yaml'),
+      path.join(tempDir, 'ui-evidence', 'config.yaml'),
       `version: 1
 project:
   name: snapshot-app
-  rootDir: .
+  rootDir: ..
 artifacts:
-  rootDir: screenshots/ui-evidence
+  rootDir: ui-evidence/screenshots
 capture:
   baseUrl: http://127.0.0.1:3000
   browser:
@@ -178,7 +180,7 @@ stages:
       'utf8',
     );
 
-    const config = await loadConfig(path.join(tempDir, 'ui-evidence.config.yaml'));
+    const config = await loadConfig(path.join(tempDir, 'ui-evidence', 'config.yaml'));
     await assert.rejects(
       () => runSnapshot({
         config,

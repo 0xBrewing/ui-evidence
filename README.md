@@ -102,9 +102,9 @@ If you want the package without using `skills add`, install it from GitHub:
 
 ```bash
 pnpm add -D github:0xBrewing/ui-evidence
-pnpm exec ui-evidence install --agent both --config ./ui-evidence.config.yaml
-pnpm exec ui-evidence doctor --config ./ui-evidence.config.yaml
-pnpm exec ui-evidence doctor --config ./ui-evidence.config.yaml --deep
+pnpm exec ui-evidence install --agent both --config ./ui-evidence/config.yaml
+pnpm exec ui-evidence doctor --config ./ui-evidence/config.yaml
+pnpm exec ui-evidence doctor --config ./ui-evidence/config.yaml --deep
 ```
 
 Equivalent install commands:
@@ -139,31 +139,31 @@ Read node_modules/ui-evidence/docs/installation.md and set up ui-evidence for th
 Run one stage:
 
 ```bash
-pnpm exec ui-evidence run --config ./ui-evidence.config.yaml --stage primary-flow
+pnpm exec ui-evidence run --config ./ui-evidence/config.yaml --stage primary-flow
 ```
 
 Compare the current branch against `main`:
 
 ```bash
-pnpm exec ui-evidence run --config ./ui-evidence.config.yaml --stage primary-flow --before-ref main
+pnpm exec ui-evidence run --config ./ui-evidence/config.yaml --stage primary-flow --before-ref main
 ```
 
 Attach to an already running app and resume only the missing or failed raw captures:
 
 ```bash
-pnpm exec ui-evidence run --config ./ui-evidence.config.yaml --stage primary-flow --after-attach http://127.0.0.1:3000 --resume
+pnpm exec ui-evidence run --config ./ui-evidence/config.yaml --stage primary-flow --after-attach http://127.0.0.1:3000 --resume
 ```
 
 Capture the current UI only:
 
 ```bash
-pnpm exec ui-evidence snapshot --config ./ui-evidence.config.yaml --scope design-system-rollout
+pnpm exec ui-evidence snapshot --config ./ui-evidence/config.yaml --scope design-system-rollout
 ```
 
 Open:
 
 ```text
-screenshots/ui-evidence/<stage-id>/review/index.html
+ui-evidence/screenshots/<stage-id>/review/index.html
 ```
 
 ## Common prompts
@@ -188,9 +188,9 @@ The Claude plugin mirror is generated into `plugins/ui-evidence/` from the canon
 version: 1
 project:
   name: my-app
-  rootDir: .
+  rootDir: ..
 artifacts:
-  rootDir: screenshots/ui-evidence
+  rootDir: ui-evidence/screenshots
 capture:
   baseUrl: http://127.0.0.1:3000
   browser:
@@ -232,7 +232,7 @@ scopes:
 Each stage writes:
 
 ```text
-screenshots/ui-evidence/<stage-id>/
+ui-evidence/screenshots/<stage-id>/
   before/
   after/
   comparison/
@@ -248,7 +248,7 @@ screenshots/ui-evidence/<stage-id>/
 Snapshot runs write:
 
 ```text
-screenshots/ui-evidence/snapshots/<run-id>/
+ui-evidence/screenshots/snapshots/<run-id>/
   captures/
   overview/
   review/
@@ -261,7 +261,7 @@ screenshots/ui-evidence/snapshots/<run-id>/
 ## Repository files worth reading
 
 - [docs/installation.md](./docs/installation.md)
-- [examples/generic-web/ui-evidence.config.yaml](./examples/generic-web/ui-evidence.config.yaml)
+- [examples/generic-web/ui-evidence/config.yaml](./examples/generic-web/ui-evidence/config.yaml)
 - [skills/ui-evidence/SKILL.md](./skills/ui-evidence/SKILL.md)
 
 ## Contributing

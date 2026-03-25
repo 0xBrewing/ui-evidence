@@ -10,6 +10,7 @@ import { handleDoctor } from '../commands/doctor.mjs';
 import { handleRun } from '../commands/run.mjs';
 import { handleSchema } from '../commands/schema.mjs';
 import { handleSnapshot } from '../commands/snapshot.mjs';
+import { DEFAULT_CONFIG_PATH } from '../lib/layout/default-layout.mjs';
 
 function printTopHelp() {
   console.log(`ui-evidence
@@ -32,10 +33,10 @@ Commands:
   help      show this message
 
 Examples:
-  ui-evidence init --interactive --config ui-evidence.config.yaml
-  ui-evidence install --agent both --config ui-evidence.config.yaml
+  ui-evidence init --interactive --config ${DEFAULT_CONFIG_PATH}
+  ui-evidence install --agent both --config ${DEFAULT_CONFIG_PATH}
   ui-evidence discover --format yaml
-  ui-evidence doctor --config ui-evidence.config.yaml
+  ui-evidence doctor --config ${DEFAULT_CONFIG_PATH}
   ui-evidence capture --phase before --stage entry-flows
   ui-evidence compare --stage entry-flows
   ui-evidence report --stage entry-flows --language ko
@@ -51,16 +52,16 @@ Usage:
   ui-evidence init [--config <path>] [--interactive] [--force]
 
 Examples:
-  ui-evidence init --interactive --config ui-evidence.config.yaml
-  ui-evidence init --config ui-evidence.config.yaml --force`,
+  ui-evidence init --interactive --config ${DEFAULT_CONFIG_PATH}
+  ui-evidence init --config ${DEFAULT_CONFIG_PATH} --force`,
   install: `ui-evidence install
 
 Usage:
   ui-evidence install [--agent claude|codex|both] [--config <path>] [--installation-doc <path>] [--force]
 
 Examples:
-  ui-evidence install --agent both --config ui-evidence.config.yaml
-  ui-evidence install --agent claude --config ui-evidence.config.yaml`,
+  ui-evidence install --agent both --config ${DEFAULT_CONFIG_PATH}
+  ui-evidence install --agent claude --config ${DEFAULT_CONFIG_PATH}`,
   discover: `ui-evidence discover
 
 Usage:
@@ -75,8 +76,8 @@ Usage:
   ui-evidence doctor [--config <path>] [--before-ref <ref>] [--deep] [--scope <id>] [--stage <id[,id...]>] [--screens <id[,id...]>] [--json]
 
 Examples:
-  ui-evidence doctor --config ui-evidence.config.yaml
-  ui-evidence doctor --config ui-evidence.config.yaml --deep --stage primary-flow`,
+  ui-evidence doctor --config ${DEFAULT_CONFIG_PATH}
+  ui-evidence doctor --config ${DEFAULT_CONFIG_PATH} --deep --stage primary-flow`,
   capture: `ui-evidence capture
 
 Usage:
