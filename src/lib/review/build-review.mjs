@@ -1,42 +1,84 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { buildStageManifest, ensureStageStructure, getStagePaths } from '../util/stage-notes.mjs';
-import { selectStages } from '../util/selection.mjs';
-import { toPosixPath } from '../util/fs.mjs';
+import { resolveCapturePlan } from '../util/selection.mjs';
+import { fileExists, toPosixPath } from '../util/fs.mjs';
 
 function relativeFromReview(stagePaths, projectRoot, targetPath) {
   const absoluteTarget = path.join(projectRoot, targetPath);
   return toPosixPath(path.relative(stagePaths.reviewDir, absoluteTarget));
 }
 
-function buildReviewData(config, stage, manifest, stagePaths) {
-  const notesLink = relativeFromReview(stagePaths, config.meta.projectRoot, manifest.artifacts.notes);
-  const reportLink = relativeFromReview(stagePaths, config.meta.projectRoot, manifest.artifacts.report);
-  const manifestLink = toPosixPath(path.relative(stagePaths.reviewDir, stagePaths.manifestPath));
-  const overviews = manifest.artifacts.overviews.map((item) => ({
-    path: relativeFromReview(stagePaths, config.meta.projectRoot, item),
-    label: path.basename(item),
-  }));
+function pickDiagnostic(item) {
+  const afterFailure = item.execution?.after?.status === 'failed' ? item.execution.after.failure : null;
+  if (afterFailure) {
+    return { phase: 'after', ...afterFailure };
+  }
 
-  const captures = manifest.captures.map((item) => ({
-    ...item,
-    beforeLink: item.before ? relativeFromReview(stagePaths, config.meta.projectRoot, item.before) : null,
-    afterLink: item.after ? relativeFromReview(stagePaths, config.meta.projectRoot, item.after) : null,
-    pairLink: item.pair ? relativeFromReview(stagePaths, config.meta.projectRoot, item.pair) : null,
-    currentLink: item.current ? relativeFromReview(stagePaths, config.meta.projectRoot, item.current) : null,
-  }));
+  const beforeFailure = item.execution?.before?.status === 'failed' ? item.execution.before.failure : null;
+  if (beforeFailure) {
+    return { phase: 'before', ...beforeFailure };
+  }
+
+  return null;
+}
+
+function buildIssueItems(captures) {
+  return captures.flatMap((item) => {
+    const diagnostic = pickDiagnostic(item);
+    if (diagnostic) {
+      return [{
+        kind: 'failure',
+        label: item.label,
+        viewportId: item.viewportId,
+        message: `${diagnostic.phase} · ${diagnostic.step ?? 'capture'} · ${diagnostic.message ?? 'Unknown failure'}`,
+      }];
+    }
+
+    if (item.status === 'missing-before' || item.status === 'missing-after' || item.status === 'missing-both' || item.status === 'missing-current') {
+      return [{
+        kind: 'missing',
+        label: item.label,
+        viewportId: item.viewportId,
+        message: item.status.replaceAll('-', ' '),
+      }];
+    }
+
+    return [];
+  });
+}
+
+function buildReviewData(config, manifest, stagePaths, availableLinks = {}) {
+  const captures = manifest.captures.map((item) => {
+    const beforeLink = item.before ? relativeFromReview(stagePaths, config.meta.projectRoot, item.before) : null;
+    const afterLink = item.after ? relativeFromReview(stagePaths, config.meta.projectRoot, item.after) : null;
+    const pairLink = item.pair ? relativeFromReview(stagePaths, config.meta.projectRoot, item.pair) : null;
+    const currentLink = item.current ? relativeFromReview(stagePaths, config.meta.projectRoot, item.current) : null;
+
+    return {
+      ...item,
+      diagnostic: pickDiagnostic(item),
+      beforeLink,
+      afterLink,
+      pairLink,
+      currentLink,
+      previewLink: pairLink ?? currentLink,
+    };
+  });
 
   return {
     generatedAt: manifest.generatedAt,
     stage: manifest.stage,
     counts: manifest.counts,
+    bundle: manifest.bundle ?? { selfContained: false, origin: 'local-stage' },
+    snapshot: manifest.snapshot,
     links: {
-      notes: notesLink,
-      report: reportLink,
-      manifest: manifestLink,
+      notes: availableLinks.notes === false ? null : relativeFromReview(stagePaths, config.meta.projectRoot, manifest.artifacts.notes),
+      report: availableLinks.report === false ? null : relativeFromReview(stagePaths, config.meta.projectRoot, manifest.artifacts.report),
+      manifest: availableLinks.manifest === false ? null : toPosixPath(path.relative(stagePaths.reviewDir, stagePaths.manifestPath)),
     },
-    overviews,
     captures,
+    issues: buildIssueItems(captures),
   };
 }
 
@@ -68,325 +110,229 @@ function renderReviewHtml(reviewData) {
     <title>${escapeHtmlValue(reviewData.stage.title)} Review</title>
     <style>
       :root {
-        --bg: #f3ede4;
-        --panel: rgba(255, 249, 240, 0.78);
-        --panel-strong: #fffaf2;
-        --ink: #241b15;
-        --muted: #69584a;
-        --line: rgba(65, 42, 22, 0.12);
-        --accent: #b7632d;
-        --accent-soft: rgba(183, 99, 45, 0.16);
-        --ok: #2c7a54;
-        --warn: #b7791f;
-        --danger: #9b2c2c;
-        --shadow: 0 24px 60px rgba(51, 31, 14, 0.12);
-        --display-font: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-        --body-font: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+        --bg: #f6f3ee;
+        --panel: #fffdfa;
+        --panel-soft: #fbf7f1;
+        --ink: #1f1a16;
+        --muted: #6b5c4f;
+        --line: rgba(54, 37, 22, 0.12);
+        --accent: #9f5a26;
+        --ok: #266145;
+        --warn: #9f5a26;
+        --danger: #8b2f2f;
       }
 
       * { box-sizing: border-box; }
 
       body {
         margin: 0;
+        background: linear-gradient(180deg, #fbf8f3 0%, var(--bg) 100%);
         color: var(--ink);
-        font-family: var(--body-font);
-        background:
-          radial-gradient(circle at top left, rgba(183, 99, 45, 0.18), transparent 34%),
-          radial-gradient(circle at 85% 10%, rgba(71, 103, 122, 0.15), transparent 28%),
-          linear-gradient(180deg, #f8f4ee 0%, var(--bg) 100%);
-      }
-
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background-image:
-          linear-gradient(rgba(36, 27, 21, 0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(36, 27, 21, 0.03) 1px, transparent 1px);
-        background-size: 36px 36px;
-        mask-image: linear-gradient(180deg, rgba(0,0,0,.18), transparent 65%);
+        font: 15px/1.6 "Avenir Next", "Segoe UI", sans-serif;
       }
 
       main {
-        width: min(1440px, calc(100vw - 32px));
-        margin: 32px auto 72px;
+        width: min(1360px, calc(100vw - 28px));
+        margin: 18px auto 48px;
       }
 
-      .hero,
-      .section,
-      .toolbar {
-        backdrop-filter: blur(18px);
-        background: var(--panel);
+      .panel {
+        background: rgba(255, 253, 250, 0.94);
         border: 1px solid var(--line);
-        box-shadow: var(--shadow);
+        border-radius: 22px;
+        padding: 20px;
+        box-shadow: 0 14px 40px rgba(35, 24, 16, 0.06);
       }
 
-      .hero {
-        position: relative;
-        overflow: hidden;
-        border-radius: 28px;
-        padding: 32px;
+      .panel + .panel {
+        margin-top: 16px;
       }
 
-      .hero::after {
-        content: "";
-        position: absolute;
-        width: 320px;
-        height: 320px;
-        right: -120px;
-        top: -120px;
-        border-radius: 999px;
-        background: radial-gradient(circle, rgba(183, 99, 45, 0.22), transparent 70%);
-      }
-
-      .eyebrow {
-        display: inline-flex;
+      .header,
+      .meta-row,
+      .link-row,
+      .toolbar,
+      .filter-group,
+      .asset-links {
+        display: flex;
+        flex-wrap: wrap;
         gap: 10px;
         align-items: center;
-        padding: 8px 12px;
+      }
+
+      .header {
+        display: grid;
+        gap: 16px;
+      }
+
+      .kicker,
+      .meta-pill,
+      .summary-pill,
+      .status-pill,
+      .filter-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        padding: 0 12px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.6);
-        font-size: 12px;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
+        background: var(--panel-soft);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .summary-pill strong,
+      .status-pill strong {
+        color: var(--ink);
+      }
+
+      .summary-pill[data-tone="danger"],
+      .status-pill[data-status="missing-both"] {
+        color: var(--danger);
+        background: rgba(139, 47, 47, 0.08);
+      }
+
+      .summary-pill[data-tone="ok"],
+      .status-pill[data-status="complete"] {
+        color: var(--ok);
+      }
+
+      .status-pill[data-status="current-only"] {
+        color: var(--accent);
+      }
+
+      .status-pill[data-status="missing-before"],
+      .status-pill[data-status="missing-after"],
+      .status-pill[data-status="missing-current"] {
+        color: var(--warn);
       }
 
       h1, h2 {
         margin: 0;
-        font-family: var(--display-font);
+        font-family: "Iowan Old Style", "Palatino Linotype", serif;
         font-weight: 700;
       }
 
       h1 {
-        margin-top: 18px;
-        font-size: clamp(2.5rem, 4vw, 4.5rem);
-        line-height: 0.95;
-        max-width: 10ch;
+        font-size: clamp(2rem, 3vw, 3rem);
+        line-height: 1.02;
       }
 
-      .hero p {
-        max-width: 65ch;
+      h2 {
+        font-size: 1.4rem;
+      }
+
+      p {
+        margin: 0;
         color: var(--muted);
-        font-size: 1rem;
-        line-height: 1.7;
       }
 
-      .hero-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr);
-        gap: 24px;
-        align-items: end;
+      .link-row a,
+      .asset-links a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 700;
       }
 
-      .stats {
+      .issue-list,
+      .quick-grid,
+      .cards {
         display: grid;
         gap: 14px;
       }
 
-      .stat-card {
-        padding: 18px;
-        border-radius: 22px;
-        background: var(--panel-strong);
-        border: 1px solid var(--line);
+      .issue-list {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       }
 
-      .stat-value {
-        display: block;
-        font-size: 2.1rem;
-        font-weight: 700;
-      }
-
-      .stat-label {
-        color: var(--muted);
-        font-size: 0.92rem;
-      }
-
-      .link-row,
-      .overview-grid,
-      .cards {
-        display: grid;
-        gap: 16px;
-      }
-
-      .link-row {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        margin-top: 18px;
-      }
-
-      .pill-link {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 14px 16px;
+      .issue-card {
+        padding: 14px;
         border-radius: 18px;
-        text-decoration: none;
-        color: var(--ink);
-        background: rgba(255,255,255,0.72);
-        border: 1px solid var(--line);
+        border: 1px solid rgba(139, 47, 47, 0.14);
+        background: rgba(139, 47, 47, 0.06);
       }
 
-      .toolbar,
-      .section {
-        margin-top: 22px;
-        border-radius: 24px;
-        padding: 24px;
+      .issue-card[data-kind="missing"] {
+        border-color: rgba(159, 90, 38, 0.16);
+        background: rgba(159, 90, 38, 0.07);
       }
 
-      .toolbar {
-        display: grid;
+      .quick-grid {
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 16px;
-        align-items: end;
       }
 
-      label {
-        display: grid;
-        gap: 8px;
-        color: var(--muted);
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-      }
-
-      select {
-        appearance: none;
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 14px 16px;
-        font: inherit;
-        color: var(--ink);
-        background: rgba(255,255,255,0.75);
-      }
-
-      .overview-grid {
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      }
-
-      .overview-card,
+      .quick-card,
       .capture-card {
-        padding: 16px;
-        border-radius: 22px;
-        background: rgba(255,255,255,0.7);
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+        border-radius: 18px;
         border: 1px solid var(--line);
+        background: var(--panel-soft);
       }
 
-      .overview-card img,
+      .quick-card {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      .quick-card img,
       .capture-card img {
         width: 100%;
         display: block;
         border-radius: 14px;
-        border: 1px solid rgba(48, 33, 20, 0.08);
-        background: #f7f2eb;
+        border: 1px solid rgba(54, 37, 22, 0.08);
+        background: #f2ebe3;
+      }
+
+      .quick-caption,
+      .capture-subtitle,
+      .diagnostic {
+        color: var(--muted);
+        font-size: 0.92rem;
       }
 
       .cards {
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       }
 
-      .capture-card {
-        display: grid;
-        gap: 14px;
-      }
-
-      .capture-header {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        align-items: start;
-      }
-
-      .capture-meta {
-        display: grid;
-        gap: 4px;
-      }
-
       .capture-title {
-        font-size: 1.15rem;
+        font-size: 1.05rem;
         font-weight: 700;
       }
 
-      .capture-subtitle {
-        color: var(--muted);
-        font-size: 0.95rem;
+      .toolbar {
+        justify-content: space-between;
       }
 
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        min-height: 36px;
-        padding: 0 14px;
+      select {
+        appearance: none;
+        border: 1px solid var(--line);
         border-radius: 999px;
-        font-size: 0.82rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      .badge[data-status="complete"] { background: rgba(44,122,84,0.13); color: var(--ok); }
-      .badge[data-status="current-only"] { background: rgba(183, 99, 45, 0.16); color: var(--accent); }
-      .badge[data-status="missing-before"],
-      .badge[data-status="missing-after"],
-      .badge[data-status="missing-current"] { background: rgba(183,121,31,0.14); color: var(--warn); }
-      .badge[data-status="missing-both"] { background: rgba(155,44,44,0.13); color: var(--danger); }
-
-      .preview-shell {
-        position: relative;
-        border-radius: 18px;
-        padding: 14px;
-        background:
-          linear-gradient(135deg, rgba(36, 27, 21, 0.08), transparent 45%),
-          linear-gradient(180deg, rgba(255,255,255,0.9), rgba(247,240,232,0.92));
+        padding: 8px 14px;
+        font: inherit;
+        background: #fff;
+        color: var(--ink);
       }
 
       .placeholder {
-        min-height: 220px;
-        display: grid;
-        place-items: center;
+        padding: 28px 20px;
         text-align: center;
-        padding: 24px;
-        border-radius: 14px;
-        border: 1px dashed rgba(36, 27, 21, 0.18);
         color: var(--muted);
+        border: 1px dashed var(--line);
+        border-radius: 18px;
       }
 
-      .asset-links {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-
-      .asset-links a {
-        text-decoration: none;
-        color: var(--accent);
-        font-weight: 700;
-      }
-
-      .diagnostic {
-        padding: 12px 14px;
-        border-radius: 14px;
-        background: rgba(155, 44, 44, 0.08);
-        color: #6b2d2d;
-        font-size: 0.9rem;
-        line-height: 1.5;
-      }
-
-      @media (max-width: 900px) {
+      @media (max-width: 720px) {
         main {
-          width: min(100vw - 20px, 100%);
-          margin-top: 14px;
+          width: min(100vw - 18px, 100%);
+          margin-top: 10px;
         }
 
-        .hero,
-        .toolbar,
-        .section {
-          border-radius: 20px;
-          padding: 18px;
-        }
-
-        .hero-grid {
-          grid-template-columns: 1fr;
+        .panel {
+          padding: 16px;
+          border-radius: 18px;
         }
       }
     </style>
@@ -415,54 +361,45 @@ function renderReviewHtml(reviewData) {
           .replaceAll("'", '&#39;');
       }
 
-      function pickDiagnostic(item) {
-        const afterFailure = item.execution?.after?.status === 'failed' ? item.execution.after.failure : null;
-        if (afterFailure) {
-          return { phase: 'after', ...afterFailure };
-        }
+      function anchorId(item) {
+        return ['capture', item.screenId, item.viewportId]
+          .join('-')
+          .replace(/[^a-zA-Z0-9_-]+/g, '-');
+      }
 
-        const beforeFailure = item.execution?.before?.status === 'failed' ? item.execution.before.failure : null;
-        if (beforeFailure) {
-          return { phase: 'before', ...beforeFailure };
-        }
-
-        return null;
+      function quickCard(item) {
+        return '<a class="quick-card" href="#' + anchorId(item) + '">'
+          + '<img loading="lazy" src="' + item.previewLink + '" alt="' + escapeHtml(item.label) + ' review image" />'
+          + '<div><strong>' + escapeHtml(item.label) + '</strong><div class="quick-caption">'
+          + escapeHtml(item.viewportId) + ' · ' + escapeHtml(item.locale) + ' · ' + escapeHtml(statusLabels[item.status] ?? item.status)
+          + '</div></div>'
+          + '</a>';
       }
 
       function captureCard(item) {
-        const preview = item.pairLink
-          ? '<img loading="lazy" src="' + item.pairLink + '" alt="' + escapeHtml(item.label) + ' comparison" />'
-          : item.currentLink
-            ? '<img loading="lazy" src="' + item.currentLink + '" alt="' + escapeHtml(item.label) + ' current capture" />'
-            : '<div class="placeholder">No reviewable image is available yet.<br />Run compare for pair cards or snapshot for current captures.</div>';
-
-        const assetLinks = [
-          item.beforeLink ? '<a href="' + item.beforeLink + '">Before</a>' : '',
-          item.afterLink ? '<a href="' + item.afterLink + '">After</a>' : '',
-          item.pairLink ? '<a href="' + item.pairLink + '">Pair</a>' : '',
-          item.currentLink ? '<a href="' + item.currentLink + '">Current</a>' : '',
-        ].filter(Boolean).join('');
-        const diagnostic = pickDiagnostic(item);
-        const diagnosticHtml = diagnostic
-          ? '<div class="diagnostic"><strong>' + escapeHtml(diagnostic.phase) + '</strong> · '
-            + escapeHtml(diagnostic.step ?? 'capture') + ' · '
-            + escapeHtml(diagnostic.message ?? 'Unknown failure') + '</div>'
+        const preview = item.previewLink
+          ? '<img loading="lazy" src="' + item.previewLink + '" alt="' + escapeHtml(item.label) + ' review image" />'
+          : '<div class="placeholder">No reviewable image is available for this card yet.</div>';
+        const diagnostic = item.diagnostic
+          ? '<div class="diagnostic"><strong>' + escapeHtml(item.diagnostic.phase) + '</strong> · '
+            + escapeHtml(item.diagnostic.step ?? 'capture') + ' · '
+            + escapeHtml(item.diagnostic.message ?? 'Unknown failure') + '</div>'
           : '';
+        const assetLinks = [
+          item.beforeLink ? '<a href="' + item.beforeLink + '">before</a>' : '',
+          item.afterLink ? '<a href="' + item.afterLink + '">after</a>' : '',
+          item.pairLink ? '<a href="' + item.pairLink + '">pair</a>' : '',
+          item.currentLink ? '<a href="' + item.currentLink + '">current</a>' : '',
+        ].filter(Boolean).join('');
 
-        return \`
-          <article class="capture-card" data-status="\${item.status}" data-viewport="\${item.viewportId}">
-            <div class="capture-header">
-              <div class="capture-meta">
-                <div class="capture-title">\${escapeHtml(item.label)}</div>
-                <div class="capture-subtitle">\${escapeHtml(item.viewportId)} · \${escapeHtml(item.locale)}</div>
-              </div>
-              <span class="badge" data-status="\${item.status}">\${statusLabels[item.status] ?? item.status}</span>
-            </div>
-            <div class="preview-shell">\${preview}</div>
-            \${diagnosticHtml}
-            <div class="asset-links">\${assetLinks}</div>
-          </article>
-        \`;
+        return '<article class="capture-card" id="' + anchorId(item) + '">'
+          + '<div class="capture-title">' + escapeHtml(item.label) + '</div>'
+          + '<div class="capture-subtitle">' + escapeHtml(item.viewportId) + ' · ' + escapeHtml(item.locale) + '</div>'
+          + '<div class="status-pill" data-status="' + item.status + '"><strong>' + escapeHtml(statusLabels[item.status] ?? item.status) + '</strong></div>'
+          + preview
+          + diagnostic
+          + (assetLinks ? '<div class="asset-links">' + assetLinks + '</div>' : '')
+          + '</article>';
       }
 
       function render(state = {}) {
@@ -473,89 +410,71 @@ function renderReviewHtml(reviewData) {
           if (status !== 'all' && item.status !== status) return false;
           return true;
         });
-
+        const quickLook = captures.filter((item) => item.previewLink);
         const viewportOptions = ['all', ...new Set(reviewData.captures.map((item) => item.viewportId))];
         const statusOptions = ['all', ...new Set(reviewData.captures.map((item) => item.status))];
+        const missingCount = reviewData.counts.expectedCaptures - reviewData.counts.reviewableCaptures;
+        const bundleLabel = reviewData.bundle.origin === 'materialized-snapshot'
+          ? 'Materialized snapshot bundle'
+          : 'Local stage bundle';
 
-        app.innerHTML = \`
-          <section class="hero">
-            <div class="hero-grid">
-              <div>
-                <div class="eyebrow">UI Evidence Review · \${escapeHtml(reviewData.stage.id)}</div>
-                <h1>\${escapeHtml(reviewData.stage.title)}</h1>
-                <p>\${escapeHtml(reviewData.stage.description)}</p>
-                <div class="link-row">
-                  <a class="pill-link" href="\${reviewData.links.notes}"><span>Open notes</span><strong>Markdown</strong></a>
-                  <a class="pill-link" href="\${reviewData.links.report}"><span>Open report</span><strong>Summary</strong></a>
-                  <a class="pill-link" href="\${reviewData.links.manifest}"><span>Open manifest</span><strong>JSON</strong></a>
-                </div>
-              </div>
-              <div class="stats">
-                <div class="stat-card">
-                  <span class="stat-value">\${reviewData.counts.reviewableCaptures ?? reviewData.counts.completeCaptures}/\${reviewData.counts.expectedCaptures}</span>
-                  <span class="stat-label">Reviewable cards</span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-value">\${reviewData.counts.overviews}</span>
-                  <span class="stat-label">Overview sheets</span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-value">\${new Date(reviewData.generatedAt).toLocaleString()}</span>
-                  <span class="stat-label">Last generated</span>
-                </div>
-              </div>
-            </div>
-          </section>
+        app.innerHTML = ''
+          + '<section class="panel header">'
+          + '  <div class="meta-row"><span class="kicker">Review Bundle</span><span class="meta-pill">' + escapeHtml(bundleLabel) + '</span>'
+          + (reviewData.snapshot?.runId ? '<span class="meta-pill">snapshot ' + escapeHtml(reviewData.snapshot.runId) + '</span>' : '')
+          + '</div>'
+          + '  <div><h1>' + escapeHtml(reviewData.stage.title) + '</h1><p>' + escapeHtml(reviewData.stage.description) + '</p></div>'
+          + '  <div class="meta-row">'
+          + '    <span class="summary-pill" data-tone="ok"><strong>' + reviewData.counts.reviewableCaptures + '/' + reviewData.counts.expectedCaptures + '</strong> reviewable</span>'
+          + '    <span class="summary-pill" data-tone="' + (reviewData.counts.failedCaptures ? 'danger' : 'ok') + '"><strong>' + reviewData.counts.failedCaptures + '</strong> failed</span>'
+          + '    <span class="summary-pill" data-tone="' + (missingCount ? 'danger' : 'ok') + '"><strong>' + missingCount + '</strong> missing</span>'
+          + '    <span class="summary-pill"><strong>' + new Date(reviewData.generatedAt).toLocaleString() + '</strong> generated</span>'
+          + '  </div>'
+          + '  <div class="link-row">'
+          + (reviewData.links.notes ? '<a href="' + reviewData.links.notes + '">notes</a>' : '')
+          + (reviewData.links.report ? '<a href="' + reviewData.links.report + '">report</a>' : '')
+          + (reviewData.links.manifest ? '<a href="' + reviewData.links.manifest + '">manifest</a>' : '')
+          + '</div>'
+          + '</section>';
 
-          <section class="toolbar">
-            <label>
-              Viewport
-              <select id="viewport-filter">
-                \${viewportOptions.map((option) => '<option value="' + option + '"' + (option === viewport ? ' selected' : '') + '>' + option + '</option>').join('')}
-              </select>
-            </label>
-            <label>
-              Status
-              <select id="status-filter">
-                \${statusOptions.map((option) => '<option value="' + option + '"' + (option === status ? ' selected' : '') + '>' + (statusLabels[option] ?? option) + '</option>').join('')}
-              </select>
-            </label>
-          </section>
+        if (reviewData.issues.length) {
+          app.innerHTML += '<section class="panel"><h2>Review First</h2><p>Start with failed or missing captures before scanning the rest.</p><div class="issue-list">'
+            + reviewData.issues.map((item) => '<article class="issue-card" data-kind="' + item.kind + '"><strong>' + escapeHtml(item.label)
+            + '</strong><div class="quick-caption">' + escapeHtml(item.viewportId) + '</div><p>' + escapeHtml(item.message) + '</p></article>').join('')
+            + '</div></section>';
+        }
 
-          <section class="section">
-            <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:18px;">
-              <div>
-                <div class="eyebrow">Overview</div>
-                <h2 style="margin-top:10px;font-size:2rem;">Stage sheets</h2>
-              </div>
-            </div>
-            <div class="overview-grid">
-              \${reviewData.overviews.length
-                ? reviewData.overviews.map((item) => '<article class="overview-card"><img loading="lazy" src="' + item.path + '" alt="' + escapeHtml(item.label) + '" /></article>').join('')
-                : '<div class="overview-card"><div class="placeholder">Overview sheets appear here after running compare or snapshot.</div></div>'}
-            </div>
-          </section>
+        app.innerHTML += '<section class="panel">'
+          + '<div class="toolbar"><div><h2>Quick Scan</h2><p>Share this stage folder as-is. The review stays portable without a local server.</p></div>'
+          + ((viewportOptions.length > 2 || statusOptions.length > 2)
+            ? '<div class="filter-group">'
+              + (viewportOptions.length > 2 ? '<label class="filter-pill">viewport <select id="viewport-filter">' + viewportOptions.map((option) => '<option value="' + option + '"' + (option === viewport ? ' selected' : '') + '>' + option + '</option>').join('') + '</select></label>' : '')
+              + (statusOptions.length > 2 ? '<label class="filter-pill">status <select id="status-filter">' + statusOptions.map((option) => '<option value="' + option + '"' + (option === status ? ' selected' : '') + '>' + escapeHtml(statusLabels[option] ?? option) + '</option>').join('') + '</select></label>' : '')
+              + '</div>'
+            : '')
+          + '</div>'
+          + '<div class="quick-grid">'
+          + (quickLook.length ? quickLook.map((item) => quickCard(item)).join('') : '<div class="placeholder">No reviewable captures match the current filters.</div>')
+          + '</div></section>';
 
-          <section class="section">
-            <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:18px;">
-              <div>
-                <div class="eyebrow">Screens</div>
-                <h2 style="margin-top:10px;font-size:2rem;">Review cards</h2>
-              </div>
-              <div class="stat-label">\${captures.length} card(s) visible</div>
-            </div>
-            <div class="cards">
-              \${captures.map((item) => captureCard(item)).join('') || '<div class="overview-card"><div class="placeholder">No captures match the current filters.</div></div>'}
-            </div>
-          </section>
-        \`;
+        app.innerHTML += '<section class="panel"><div class="toolbar"><div><h2>Detail Cards</h2><p>Open the original image only when the quick scan raises a question.</p></div><div class="quick-caption">' + captures.length + ' visible</div></div>'
+          + '<div class="cards">'
+          + (captures.length ? captures.map((item) => captureCard(item)).join('') : '<div class="placeholder">No captures match the current filters.</div>')
+          + '</div></section>';
 
-        document.getElementById('viewport-filter').addEventListener('change', (event) => {
-          render({ ...state, viewport: event.target.value });
-        });
-        document.getElementById('status-filter').addEventListener('change', (event) => {
-          render({ ...state, status: event.target.value });
-        });
+        const viewportFilter = document.getElementById('viewport-filter');
+        if (viewportFilter) {
+          viewportFilter.addEventListener('change', (event) => {
+            render({ ...state, viewport: event.target.value });
+          });
+        }
+
+        const statusFilter = document.getElementById('status-filter');
+        if (statusFilter) {
+          statusFilter.addEventListener('change', (event) => {
+            render({ ...state, status: event.target.value });
+          });
+        }
       }
 
       render();
@@ -569,24 +488,34 @@ function hasRenderableArtifacts(manifest) {
     || manifest.counts.after > 0
     || manifest.counts.pairs > 0
     || (manifest.counts.currentCaptures ?? 0) > 0
-    || manifest.counts.overviews > 0
     || manifest.counts.failedCaptures > 0;
 }
 
-export async function buildReviewPages({ config, stageArg, language }) {
-  const stages = selectStages(config, stageArg);
+export async function buildReviewPages({ config, stageArg, screenIds = [], viewportIds = [], profileId = null, paramsFilter = {}, language }) {
+  const plan = resolveCapturePlan(config, {
+    stageArg,
+    screenIds,
+    viewportIds,
+    profileId,
+    paramsFilter,
+  });
   const written = [];
 
-  for (const stage of stages) {
+  for (const selection of plan.selections) {
+    const { stage, screens, viewports } = selection;
     await ensureStageStructure(config, stage, language);
-    const manifest = await buildStageManifest(config, stage, language);
+    const manifest = await buildStageManifest(config, stage, language, { screens, viewports });
     if (!hasRenderableArtifacts(manifest)) {
       throw new Error(
         `No reviewable artifacts found for stage "${stage.id}". Run "ui-evidence run --stage ${stage.id}" or "ui-evidence snapshot --stage ${stage.id}" first.`,
       );
     }
     const stagePaths = getStagePaths(config, stage, language);
-    const reviewData = buildReviewData(config, stage, manifest, stagePaths);
+    const reviewData = buildReviewData(config, manifest, stagePaths, {
+      notes: await fileExists(stagePaths.notesPath),
+      report: await fileExists(stagePaths.reportPath),
+      manifest: await fileExists(stagePaths.manifestPath),
+    });
     await writeFile(stagePaths.reviewPath, renderReviewHtml(reviewData), 'utf8');
     written.push(stagePaths.reviewPath);
     console.log(`review ${stage.id}: ${stagePaths.reviewPath}`);

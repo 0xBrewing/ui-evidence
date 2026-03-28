@@ -23,6 +23,8 @@ I built it after AI coding tools started changing the wrong UI or quietly skippi
 - attaches to an already running app when you do not want ui-evidence to launch the server
 - resumes long runs and skips raw captures that already succeeded
 - captures the current UI into a history snapshot bundle when you only need human review
+- keeps each stage folder and snapshot run folder self-contained so you can zip one folder and share it
+- opens generated HTML directly with `file://` or Finder/Explorer without running a local server
 - scaffolds repo-local bootstrap files after the skill or package is installed
 
 The package is the local CLI. The skill is the easiest install surface for Codex, Claude Code, and other `SKILL.md`-based clients.
@@ -104,7 +106,7 @@ If you want the package without using `skills add`, install it from GitHub:
 pnpm add -D github:0xBrewing/ui-evidence
 pnpm exec ui-evidence install --agent both --config ./ui-evidence/config.yaml
 pnpm exec ui-evidence doctor --config ./ui-evidence/config.yaml
-pnpm exec ui-evidence doctor --config ./ui-evidence/config.yaml --deep
+pnpm exec ui-evidence doctor --config ./ui-evidence/config.yaml --ready
 ```
 
 Equivalent install commands:
@@ -161,12 +163,22 @@ pnpm exec ui-evidence snapshot --config ./ui-evidence/config.yaml --scope design
 ```
 
 If a stage has no before/after comparison artifacts yet, `ui-evidence review --stage <stage-id>` now reuses the latest snapshot `current` captures for that stage. If neither stage artifacts nor snapshot artifacts exist, the command fails clearly instead of generating an empty review.
+When that fallback happens, ui-evidence materializes the needed snapshot images into the stage bundle so `ui-evidence/screenshots/<stage-id>/` stays portable on its own.
+
+Profiles and params let you keep one config instead of spawning `config.mobile-ko.yaml` style variants:
+
+```bash
+pnpm exec ui-evidence snapshot --config ./ui-evidence/config.yaml --stage primary-flow --profile mobile-en
+pnpm exec ui-evidence run --config ./ui-evidence/config.yaml --stage primary-flow --params locale=ko,variant=core
+```
 
 Open:
 
 ```text
 ui-evidence/screenshots/<stage-id>/review/index.html
 ```
+
+You can open the generated HTML directly from disk. A local web server is not required.
 
 ## Common prompts
 
@@ -178,11 +190,11 @@ ui-evidence/screenshots/<stage-id>/review/index.html
 
 This repo ships the standard pieces expected by the open skills ecosystem:
 
-- [`skills/ui-evidence/SKILL.md`](./skills/ui-evidence/SKILL.md)
-- [`skills/ui-evidence/agents/openai.yaml`](./skills/ui-evidence/agents/openai.yaml)
+- [`agent-skill/ui-evidence/SKILL.md`](./agent-skill/ui-evidence/SKILL.md)
+- [`agent-skill/ui-evidence/agents/openai.yaml`](./agent-skill/ui-evidence/agents/openai.yaml)
 - [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json)
 
-The Claude plugin mirror is generated into `plugins/ui-evidence/` from the canonical skill source during `prepare`, and is intentionally not committed so marketplace indexing sees only the canonical skill path.
+The Claude plugin mirror is generated into `plugins/ui-evidence/` from the canonical skill source during `prepare`, and is intentionally not committed so marketplace indexing sees only the canonical source path.
 
 ## Minimal config shape
 
@@ -193,6 +205,9 @@ project:
   rootDir: ..
 artifacts:
   rootDir: ui-evidence/screenshots
+runtime:
+  stateDir: ui-evidence/state
+  tempDir: ui-evidence/tmp
 capture:
   baseUrl: http://127.0.0.1:3000
   browser:
@@ -207,6 +222,12 @@ servers:
   after:
     command: pnpm dev
     baseUrl: http://127.0.0.1:3000
+profiles:
+  mobile-en:
+    viewportIds:
+      - mobile-390
+    params:
+      locale: en
 stages:
   - id: primary-flow
     title: Primary Flow
@@ -217,6 +238,9 @@ stages:
       - id: home
         label: Home
         path: /
+        params:
+          locale: en
+          variant: core
         waitFor:
           testId: screen-home
 scopes:
@@ -247,6 +271,18 @@ ui-evidence/screenshots/<stage-id>/
   manifest.json
 ```
 
+Durable runtime state and temporary worktrees now live under the canonical runtime layout:
+
+```text
+ui-evidence/state/
+  capture/
+  shared/
+  fixtures/
+ui-evidence/tmp/
+  runs/
+  baseline/
+```
+
 Snapshot runs write:
 
 ```text
@@ -264,7 +300,7 @@ ui-evidence/screenshots/snapshots/<run-id>/
 
 - [docs/installation.md](./docs/installation.md)
 - [examples/generic-web/ui-evidence/config.yaml](./examples/generic-web/ui-evidence/config.yaml)
-- [skills/ui-evidence/SKILL.md](./skills/ui-evidence/SKILL.md)
+- [agent-skill/ui-evidence/SKILL.md](./agent-skill/ui-evidence/SKILL.md)
 
 ## Contributing
 
@@ -274,7 +310,7 @@ If you want to improve setup UX, skill metadata, or HTML review output, start wi
 
 - [README.md](./README.md)
 - [docs/installation.md](./docs/installation.md)
-- [skills/ui-evidence/SKILL.md](./skills/ui-evidence/SKILL.md)
+- [agent-skill/ui-evidence/SKILL.md](./agent-skill/ui-evidence/SKILL.md)
 
 ## License
 

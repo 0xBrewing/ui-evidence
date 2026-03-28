@@ -121,12 +121,15 @@ stages:
       now: new Date('2026-03-25T12:34:56Z'),
     });
 
-    const manifest = await readJson(path.join(tempDir, 'ui-evidence', 'screenshots', 'snapshots', result.runId, 'manifest.json'));
-    const reviewHtml = await readFile(path.join(tempDir, 'ui-evidence', 'screenshots', 'snapshots', result.runId, 'review', 'index.html'), 'utf8');
+    const runDir = path.join(tempDir, 'ui-evidence', 'screenshots', 'snapshots', result.runId);
+    const manifest = await readJson(path.join(runDir, 'manifest.json'));
+    const reviewHtml = await readFile(path.join(runDir, 'review', 'index.html'), 'utf8');
+    const report = await readFile(path.join(runDir, 'report.en.md'), 'utf8');
 
     assert.equal(result.runId, '20260325-123456--buttons');
     assert.equal(manifest.kind, 'snapshot-run');
     assert.equal(manifest.scope.id, 'button-rollout');
+    assert.equal(manifest.bundle.selfContained, true);
     assert.equal(manifest.counts.captures, 2);
     assert.equal(manifest.counts.overviews, 2);
     assert.equal(manifest.captures.length, 2);
@@ -134,7 +137,10 @@ stages:
     assert.ok(manifest.artifacts.review.endsWith('review/index.html'));
     assert.match(reviewHtml, /Button Rollout/);
     assert.match(reviewHtml, /hero__default__mobile-390__current\.png/);
+    assert.match(reviewHtml, /\.\.\/captures\/landing\/hero__default__mobile-390__current\.png/);
     assert.doesNotMatch(reviewHtml, /billing__default__mobile-390__current\.png/);
+    assert.doesNotMatch(reviewHtml, /snapshot-overview\.png/);
+    assert.match(report, /snapshot:/);
   } finally {
     await new Promise((resolve) => runtime.server.close(resolve));
     await rm(tempDir, { recursive: true, force: true });
@@ -269,21 +275,26 @@ stages:
       language: 'en',
     });
 
-    const manifest = await readJson(path.join(tempDir, 'ui-evidence', 'screenshots', 'landing', 'manifest.json'));
-    const reviewHtml = await readFile(path.join(tempDir, 'ui-evidence', 'screenshots', 'landing', 'review', 'index.html'), 'utf8');
+    const stageDir = path.join(tempDir, 'ui-evidence', 'screenshots', 'landing');
+    const manifest = await readJson(path.join(stageDir, 'manifest.json'));
+    const reviewHtml = await readFile(path.join(stageDir, 'review', 'index.html'), 'utf8');
 
     assert.equal(written.length, 1);
     assert.equal(manifest.snapshot.runId, latestSnapshot.runId);
+    assert.equal(manifest.bundle.selfContained, true);
+    assert.equal(manifest.bundle.origin, 'materialized-snapshot');
     assert.equal(manifest.counts.currentCaptures, 1);
     assert.equal(manifest.counts.reviewableCaptures, 1);
     assert.equal(manifest.counts.pendingCaptures, 0);
     assert.equal(manifest.counts.overviews, 1);
     assert.equal(manifest.captures[0].status, 'current-only');
-    assert.ok(manifest.captures[0].current.includes(latestSnapshot.runId));
-    assert.ok(manifest.artifacts.current[0].includes(latestSnapshot.runId));
-    assert.match(reviewHtml, /Current Only/);
-    assert.match(reviewHtml, new RegExp(latestSnapshot.runId));
-    assert.match(reviewHtml, /Current/);
+    assert.match(manifest.captures[0].current, /screenshots\/landing\/current\/hero__default__mobile-390__current\.png$/);
+    assert.match(manifest.artifacts.current[0], /screenshots\/landing\/current\/hero__default__mobile-390__current\.png$/);
+    assert.doesNotMatch(manifest.artifacts.current[0], new RegExp(latestSnapshot.runId));
+    assert.match(reviewHtml, /Materialized snapshot bundle/);
+    assert.doesNotMatch(reviewHtml, /snapshots\//);
+    assert.doesNotMatch(reviewHtml, /snapshot-overview\.png/);
+    assert.match(reviewHtml, /\.\.\/current\/hero__default__mobile-390__current\.png/);
   } finally {
     await new Promise((resolve) => runtime.server.close(resolve));
     await rm(tempDir, { recursive: true, force: true });

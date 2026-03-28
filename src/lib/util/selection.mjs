@@ -23,12 +23,50 @@ export function getStageMap(config) {
   return new Map(config.stages.map((stage) => [stage.id, stage]));
 }
 
-export function selectScreens(stage, requestedScreenIds = []) {
-  if (!requestedScreenIds.length) {
-    return stage.screens;
+export function resolveProfile(config, profileId) {
+  if (!profileId) {
+    return null;
   }
 
-  return requestedScreenIds.map((screenId) => {
+  const profile = config.profiles?.[profileId];
+  if (!profile) {
+    throw new Error(
+      `Unknown profile "${profileId}". Available profiles: ${Object.keys(config.profiles ?? {}).join(', ') || 'none'}`,
+    );
+  }
+  return {
+    id: profileId,
+    ...profile,
+  };
+}
+
+export function resolveScreenParams(screen) {
+  return {
+    ...(screen.locale && !screen.params?.locale ? { locale: screen.locale } : {}),
+    ...(screen.params ?? {}),
+    ...((screen.params?.locale || screen.locale)
+      ? {}
+      : screen.path.startsWith('/en')
+        ? { locale: 'en' }
+        : screen.path.startsWith('/ko')
+          ? { locale: 'ko' }
+          : {}),
+  };
+}
+
+function matchesParams(screen, paramsFilter = {}) {
+  const expectedEntries = Object.entries(paramsFilter ?? {});
+  if (!expectedEntries.length) {
+    return true;
+  }
+
+  const resolved = resolveScreenParams(screen);
+  return expectedEntries.every(([key, expectedValue]) => String(resolved[key] ?? '') === String(expectedValue));
+}
+
+export function selectScreens(stage, requestedScreenIds = [], paramsFilter = {}) {
+  const requestedScreens = requestedScreenIds.length
+    ? requestedScreenIds.map((screenId) => {
     const screen = stage.screens.find((candidate) => candidate.id === screenId);
     if (!screen) {
       throw new Error(
@@ -38,16 +76,38 @@ export function selectScreens(stage, requestedScreenIds = []) {
       );
     }
     return screen;
-  });
+    })
+    : stage.screens;
+
+  return requestedScreens.filter((screen) => matchesParams(screen, paramsFilter));
 }
 
-export function selectViewports(config, stage, requestedViewportIds = [], fallbackViewportIds = []) {
-  const viewportIds = requestedViewportIds.length
-    ? requestedViewportIds
+export function selectViewports(config, stage, requestedViewportIds = [], fallbackViewportIds = [], profileViewportIds = []) {
+  const viewportMap = new Map(config.capture.viewports.map((viewport) => [viewport.id, viewport]));
+  for (const viewportId of requestedViewportIds) {
+    if (!viewportMap.has(viewportId)) {
+      throw new Error(
+        `Unknown viewport "${viewportId}". Available viewports: ${config.capture.viewports
+          .map((item) => item.id)
+          .join(', ')}`,
+      );
+    }
+  }
+
+  const baseViewportIds = profileViewportIds.length
+    ? profileViewportIds
     : fallbackViewportIds.length
       ? fallbackViewportIds
       : (stage.defaultViewports?.length ? stage.defaultViewports : config.capture.viewports.map((item) => item.id));
-  const viewportMap = new Map(config.capture.viewports.map((viewport) => [viewport.id, viewport]));
+  const viewportIds = requestedViewportIds.length
+    ? (profileViewportIds.length
+      ? requestedViewportIds.filter((viewportId) => profileViewportIds.includes(viewportId))
+      : requestedViewportIds)
+    : baseViewportIds;
+
+  if (requestedViewportIds.length && profileViewportIds.length && viewportIds.length === 0) {
+    throw new Error(`Requested viewports do not match profile-constrained viewports for stage "${stage.id}".`);
+  }
 
   return viewportIds.map((viewportId) => {
     const viewport = viewportMap.get(viewportId);
@@ -71,14 +131,9 @@ export function resolveBaseUrl(config, phase, override) {
 }
 
 export function inferLocale(screen) {
-  if (screen.locale) {
-    return screen.locale;
-  }
-  if (screen.path.startsWith('/en')) {
-    return 'en';
-  }
-  if (screen.path.startsWith('/ko')) {
-    return 'ko';
+  const params = resolveScreenParams(screen);
+  if (params.locale) {
+    return String(params.locale);
   }
   return 'default';
 }
@@ -135,7 +190,14 @@ export function resolveCapturePlan(config, options = {}) {
     screenIds = [],
     viewportIds = [],
     scopeId = null,
+    profileId = null,
+    paramsFilter = {},
   } = options;
+  const profile = resolveProfile(config, profileId);
+  const combinedParams = {
+    ...(profile?.params ?? {}),
+    ...(paramsFilter ?? {}),
+  };
 
   if (scopeId && ((!stageArg ? false : stageArg !== 'all') || screenIds.length)) {
     throw new Error('Cannot combine --scope with --stage or --screens.');
@@ -157,26 +219,44 @@ export function resolveCapturePlan(config, options = {}) {
 
       return {
         stage,
-        screens: selectScreens(stage, target.screenIds ?? []),
-        viewports: selectViewports(config, stage, viewportIds, scope.defaultViewports ?? []),
+        screens: selectScreens(stage, target.screenIds ?? [], combinedParams),
+        viewports: selectViewports(
+          config,
+          stage,
+          viewportIds,
+          scope.defaultViewports ?? [],
+          profile?.viewportIds ?? [],
+        ),
       };
-    });
+    }).filter((selection) => selection.screens.length > 0);
+
+    if (!selections.length) {
+      throw new Error('No screens matched the selected scope and params/profile filters.');
+    }
 
     return {
       mode: 'scope',
       scope,
+      profile,
       selections,
     };
   }
 
   const stages = selectStages(config, stageArg);
+  const selections = stages.map((stage) => ({
+    stage,
+    screens: selectScreens(stage, screenIds, combinedParams),
+    viewports: selectViewports(config, stage, viewportIds, [], profile?.viewportIds ?? []),
+  })).filter((selection) => selection.screens.length > 0);
+
+  if (!selections.length) {
+    throw new Error('No screens matched the selected stage/screen and params/profile filters.');
+  }
+
   return {
     mode: 'direct',
     scope: null,
-    selections: stages.map((stage) => ({
-      stage,
-      screens: selectScreens(stage, screenIds),
-      viewports: selectViewports(config, stage, viewportIds),
-    })),
+    profile,
+    selections,
   };
 }

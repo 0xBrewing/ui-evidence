@@ -99,6 +99,7 @@ test('handleRun uses afterAttach overrides and skips successful captures on resu
       skipCompare: true,
       skipReport: true,
       skipReview: true,
+      skipReady: true,
       afterAttach: runtime.baseUrl,
     });
 
@@ -110,7 +111,7 @@ test('handleRun uses afterAttach overrides and skips successful captures on resu
       'after',
       'home__default__mobile-390__after.png',
     );
-    const captureStatePath = path.join(tempDir, 'ui-evidence', 'screenshots', 'landing', 'capture-state.json');
+    const captureStatePath = path.join(tempDir, 'ui-evidence', 'state', 'capture', 'landing.json');
     const captureState = await readJson(captureStatePath);
 
     assert.equal(process.exitCode ?? 0, 0);
@@ -127,6 +128,7 @@ test('handleRun uses afterAttach overrides and skips successful captures on resu
       skipCompare: true,
       skipReport: true,
       skipReview: true,
+      skipReady: true,
       afterAttach: runtime.baseUrl,
       resume: true,
     });

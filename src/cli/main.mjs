@@ -36,13 +36,13 @@ Examples:
   ui-evidence init --interactive --config ${DEFAULT_CONFIG_PATH}
   ui-evidence install --agent both --config ${DEFAULT_CONFIG_PATH}
   ui-evidence discover --format yaml
-  ui-evidence doctor --config ${DEFAULT_CONFIG_PATH}
-  ui-evidence capture --phase before --stage entry-flows
+  ui-evidence doctor --config ${DEFAULT_CONFIG_PATH} --ready
+  ui-evidence capture --phase before --stage entry-flows --profile mobile-en
   ui-evidence compare --stage entry-flows
-  ui-evidence report --stage entry-flows --language ko
-  ui-evidence review --stage entry-flows
-  ui-evidence run --stage entry-flows
-  ui-evidence snapshot --scope button-rollout`);
+  ui-evidence report --stage entry-flows --params locale=ko --language ko
+  ui-evidence review --stage entry-flows --profile mobile-en
+  ui-evidence run --stage entry-flows --resume
+  ui-evidence snapshot --scope button-rollout --profile mobile-en`);
 }
 
 const commandHelp = {
@@ -57,11 +57,12 @@ Examples:
   install: `ui-evidence install
 
 Usage:
-  ui-evidence install [--agent claude|codex|both] [--config <path>] [--installation-doc <path>] [--force]
+  ui-evidence install [--agent claude|codex|both] [--config <path>] [--installation-doc <path>] [--sync] [--force]
 
 Examples:
   ui-evidence install --agent both --config ${DEFAULT_CONFIG_PATH}
-  ui-evidence install --agent claude --config ${DEFAULT_CONFIG_PATH}`,
+  ui-evidence install --agent claude --config ${DEFAULT_CONFIG_PATH}
+  ui-evidence install --sync`,
   discover: `ui-evidence discover
 
 Usage:
@@ -73,19 +74,20 @@ Examples:
   doctor: `ui-evidence doctor
 
 Usage:
-  ui-evidence doctor [--config <path>] [--before-ref <ref>] [--deep] [--scope <id>] [--stage <id[,id...]>] [--screens <id[,id...]>] [--json]
+  ui-evidence doctor [--config <path>] [--before-ref <ref>] [--ready|--deep] [--scope <id>] [--stage <id[,id...]>] [--screens <id[,id...]>] [--profile <id>] [--params <k=v,...>] [--json]
 
 Examples:
   ui-evidence doctor --config ${DEFAULT_CONFIG_PATH}
-  ui-evidence doctor --config ${DEFAULT_CONFIG_PATH} --deep --stage primary-flow`,
+  ui-evidence doctor --config ${DEFAULT_CONFIG_PATH} --ready --stage primary-flow`,
   capture: `ui-evidence capture
 
 Usage:
-  ui-evidence capture --phase before|after [--config <path>] [--stage <id[,id...]>|all] [--screens <id[,id...]>] [--viewports <id[,id...]>] [--base-url <url>]
+  ui-evidence capture --phase before|after [--config <path>] [--stage <id[,id...]>|all] [--screens <id[,id...]>] [--viewports <id[,id...]>] [--profile <id>] [--params <k=v,...>] [--base-url <url>] [--resume] [--quiet] [--summary]
 
 Examples:
   ui-evidence capture --phase after --stage primary-flow
-  ui-evidence capture --phase before --stage primary-flow --base-url http://127.0.0.1:3100`,
+  ui-evidence capture --phase before --stage primary-flow --base-url http://127.0.0.1:3100
+  ui-evidence capture --phase after --profile mobile-en --params variant=core`,
   compare: `ui-evidence compare
 
 Usage:
@@ -97,7 +99,7 @@ Examples:
   report: `ui-evidence report
 
 Usage:
-  ui-evidence report [--config <path>] [--stage <id[,id...]>|all] [--language <code>]
+  ui-evidence report [--config <path>] [--stage <id[,id...]>|all] [--screens <id[,id...]>] [--viewports <id[,id...]>] [--profile <id>] [--params <k=v,...>] [--language <code>]
 
 Examples:
   ui-evidence report --stage primary-flow --language en
@@ -105,14 +107,14 @@ Examples:
   review: `ui-evidence review
 
 Usage:
-  ui-evidence review [--config <path>] [--stage <id[,id...]>|all] [--language <code>]
+  ui-evidence review [--config <path>] [--stage <id[,id...]>|all] [--screens <id[,id...]>] [--viewports <id[,id...]>] [--profile <id>] [--params <k=v,...>] [--language <code>]
 
 Examples:
   ui-evidence review --stage primary-flow`,
   snapshot: `ui-evidence snapshot
 
 Usage:
-  ui-evidence snapshot [--config <path>] [--scope <id>] [--stage <id[,id...]>|all] [--screens <id[,id...]>] [--viewports <id[,id...]>] [--base-url <url>] [--label <slug>] [--language <code>]
+  ui-evidence snapshot [--config <path>] [--scope <id>] [--stage <id[,id...]>|all] [--screens <id[,id...]>] [--viewports <id[,id...]>] [--profile <id>] [--params <k=v,...>] [--base-url <url>] [--label <slug>] [--language <code>] [--skip-ready] [--quiet] [--summary] [--show-server-log-on-fail]
 
 Examples:
   ui-evidence snapshot --scope design-system-rollout
@@ -120,7 +122,7 @@ Examples:
   run: `ui-evidence run
 
 Usage:
-  ui-evidence run [--config <path>] [--stage <id[,id...]>|all] [--screens <id[,id...]>] [--viewports <id[,id...]>] [--before-ref <ref>] [--before-base-url <url>] [--after-base-url <url>] [--before-attach <url>] [--after-attach <url>] [--resume] [--skip-before] [--skip-after] [--skip-compare] [--skip-report] [--skip-review]
+  ui-evidence run [--config <path>] [--stage <id[,id...]>|all] [--screens <id[,id...]>] [--viewports <id[,id...]>] [--profile <id>] [--params <k=v,...>] [--before-ref <ref>] [--before-base-url <url>] [--after-base-url <url>] [--before-attach <url>] [--after-attach <url>] [--resume] [--skip-ready] [--skip-before] [--skip-after] [--skip-compare] [--skip-report] [--skip-review] [--quiet] [--summary] [--show-server-log-on-fail]
 
 Examples:
   ui-evidence run --stage primary-flow

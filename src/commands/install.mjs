@@ -7,6 +7,7 @@ export async function handleInstall(options) {
     config: options.config,
     installationDoc: options.installationDoc,
     force: Boolean(options.force),
+    sync: Boolean(options.sync),
   });
 
   console.log(`consumer bootstrap ready (${result.discovery.packageManager}, ${result.discovery.preset})`);

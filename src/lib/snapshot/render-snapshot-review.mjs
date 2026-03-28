@@ -26,265 +26,214 @@ export function renderSnapshotReviewHtml(reviewData) {
     <title>${escapeHtmlValue(reviewData.run.title)} Snapshot</title>
     <style>
       :root {
-        --bg: #f3ede4;
-        --panel: rgba(255, 249, 240, 0.78);
-        --panel-strong: #fffaf2;
-        --ink: #241b15;
-        --muted: #69584a;
-        --line: rgba(65, 42, 22, 0.12);
-        --accent: #b7632d;
-        --shadow: 0 24px 60px rgba(51, 31, 14, 0.12);
-        --display-font: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-        --body-font: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+        --bg: #f6f3ee;
+        --panel: #fffdfa;
+        --panel-soft: #fbf7f1;
+        --ink: #1f1a16;
+        --muted: #6b5c4f;
+        --line: rgba(54, 37, 22, 0.12);
+        --accent: #9f5a26;
+        --ok: #266145;
+        --warn: #9f5a26;
+        --danger: #8b2f2f;
       }
 
       * { box-sizing: border-box; }
 
       body {
         margin: 0;
+        background: linear-gradient(180deg, #fbf8f3 0%, var(--bg) 100%);
         color: var(--ink);
-        font-family: var(--body-font);
-        background:
-          radial-gradient(circle at top left, rgba(183, 99, 45, 0.18), transparent 34%),
-          radial-gradient(circle at 85% 10%, rgba(71, 103, 122, 0.15), transparent 28%),
-          linear-gradient(180deg, #f8f4ee 0%, var(--bg) 100%);
-      }
-
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background-image:
-          linear-gradient(rgba(36, 27, 21, 0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(36, 27, 21, 0.03) 1px, transparent 1px);
-        background-size: 36px 36px;
-        mask-image: linear-gradient(180deg, rgba(0,0,0,.18), transparent 65%);
+        font: 15px/1.6 "Avenir Next", "Segoe UI", sans-serif;
       }
 
       main {
-        width: min(1440px, calc(100vw - 32px));
-        margin: 32px auto 72px;
+        width: min(1360px, calc(100vw - 28px));
+        margin: 18px auto 48px;
       }
 
-      .hero,
-      .toolbar,
-      .section {
-        backdrop-filter: blur(18px);
-        background: var(--panel);
+      .panel {
+        background: rgba(255, 253, 250, 0.94);
         border: 1px solid var(--line);
-        box-shadow: var(--shadow);
-        border-radius: 24px;
+        border-radius: 22px;
+        padding: 20px;
+        box-shadow: 0 14px 40px rgba(35, 24, 16, 0.06);
       }
 
-      .hero,
-      .toolbar,
-      .section {
-        padding: 24px;
+      .panel + .panel {
+        margin-top: 16px;
       }
 
-      .hero {
-        overflow: hidden;
+      .header {
+        display: grid;
+        gap: 16px;
       }
 
-      .eyebrow {
-        display: inline-flex;
+      .header-top,
+      .meta-row,
+      .link-row,
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
         gap: 10px;
         align-items: center;
-        padding: 8px 12px;
+      }
+
+      .kicker,
+      .meta-pill,
+      .summary-pill,
+      .filter-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        padding: 0 12px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.6);
-        font-size: 12px;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
+        background: var(--panel-soft);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .summary-pill strong {
+        color: var(--ink);
+      }
+
+      .summary-pill[data-tone="danger"] {
+        color: var(--danger);
+        background: rgba(139, 47, 47, 0.08);
+      }
+
+      .summary-pill[data-tone="ok"] {
+        color: var(--ok);
       }
 
       h1, h2 {
         margin: 0;
-        font-family: var(--display-font);
+        font-family: "Iowan Old Style", "Palatino Linotype", serif;
         font-weight: 700;
       }
 
       h1 {
-        margin-top: 18px;
-        font-size: clamp(2.4rem, 4vw, 4.3rem);
-        line-height: 0.95;
-        max-width: 12ch;
+        font-size: clamp(2rem, 3vw, 3rem);
+        line-height: 1.02;
       }
 
-      .hero p {
-        max-width: 70ch;
+      h2 {
+        font-size: 1.4rem;
+      }
+
+      p {
+        margin: 0;
         color: var(--muted);
-        font-size: 1rem;
-        line-height: 1.7;
       }
 
-      .hero-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr);
-        gap: 24px;
-        align-items: end;
-      }
-
-      .stats,
-      .link-row,
-      .overview-grid,
-      .cards {
-        display: grid;
-        gap: 16px;
-      }
-
-      .stats {
-        gap: 14px;
-      }
-
-      .stat-card,
-      .overview-card,
-      .capture-card {
-        padding: 16px;
-        border-radius: 22px;
-        background: rgba(255,255,255,0.72);
-        border: 1px solid var(--line);
-      }
-
-      .stat-value {
-        display: block;
-        font-size: 2rem;
+      .link-row a,
+      .asset-links a {
+        color: var(--accent);
+        text-decoration: none;
         font-weight: 700;
       }
 
-      .stat-label,
-      .capture-subtitle {
-        color: var(--muted);
+      .issue-list,
+      .quick-grid,
+      .cards {
+        display: grid;
+        gap: 14px;
       }
 
-      .link-row {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        margin-top: 18px;
+      .issue-list {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       }
 
-      .pill-link {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 14px 16px;
+      .issue-card {
+        padding: 14px;
         border-radius: 18px;
-        text-decoration: none;
-        color: var(--ink);
-        background: rgba(255,255,255,0.72);
-        border: 1px solid var(--line);
+        border: 1px solid rgba(139, 47, 47, 0.14);
+        background: rgba(139, 47, 47, 0.06);
       }
 
-      .toolbar,
-      .section {
-        margin-top: 22px;
-      }
-
-      .toolbar {
-        display: grid;
+      .quick-grid {
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 16px;
-        align-items: end;
       }
 
-      label {
+      .quick-card,
+      .capture-card {
         display: grid;
-        gap: 8px;
-        color: var(--muted);
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-      }
-
-      select {
-        appearance: none;
+        gap: 12px;
+        padding: 14px;
+        border-radius: 18px;
         border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 14px 16px;
-        font: inherit;
-        color: var(--ink);
-        background: rgba(255,255,255,0.75);
+        background: var(--panel-soft);
       }
 
-      .overview-grid {
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      .quick-card {
+        text-decoration: none;
+        color: inherit;
       }
 
-      .overview-card img,
+      .quick-card img,
       .capture-card img {
         width: 100%;
         display: block;
         border-radius: 14px;
-        border: 1px solid rgba(48, 33, 20, 0.08);
-        background: #f7f2eb;
+        border: 1px solid rgba(54, 37, 22, 0.08);
+        background: #f2ebe3;
+      }
+
+      .quick-caption,
+      .capture-subtitle {
+        color: var(--muted);
+        font-size: 0.92rem;
       }
 
       .cards {
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       }
 
-      .capture-card {
-        display: grid;
-        gap: 14px;
-      }
-
-      .capture-header {
-        display: grid;
-        gap: 4px;
-      }
-
       .capture-title {
-        font-size: 1.15rem;
+        font-size: 1.05rem;
         font-weight: 700;
       }
 
-      .preview-shell {
-        position: relative;
-        border-radius: 18px;
-        padding: 14px;
-        background:
-          linear-gradient(135deg, rgba(36, 27, 21, 0.08), transparent 45%),
-          linear-gradient(180deg, rgba(255,255,255,0.9), rgba(247,240,232,0.92));
+      .toolbar {
+        justify-content: space-between;
       }
 
-      .asset-links {
+      .filter-group {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
+        align-items: center;
       }
 
-      .asset-links a {
-        text-decoration: none;
-        color: var(--accent);
-        font-weight: 700;
+      select {
+        appearance: none;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font: inherit;
+        background: #fff;
+        color: var(--ink);
       }
 
       .placeholder {
-        min-height: 220px;
-        display: grid;
-        place-items: center;
+        padding: 28px 20px;
         text-align: center;
-        padding: 24px;
-        border-radius: 14px;
-        border: 1px dashed rgba(36, 27, 21, 0.18);
         color: var(--muted);
+        border: 1px dashed var(--line);
+        border-radius: 18px;
       }
 
-      @media (max-width: 900px) {
+      @media (max-width: 720px) {
         main {
-          width: min(100vw - 20px, 100%);
-          margin-top: 14px;
+          width: min(100vw - 18px, 100%);
+          margin-top: 10px;
         }
 
-        .hero,
-        .toolbar,
-        .section {
-          padding: 18px;
-          border-radius: 20px;
-        }
-
-        .hero-grid {
-          grid-template-columns: 1fr;
+        .panel {
+          padding: 16px;
+          border-radius: 18px;
         }
       }
     </style>
@@ -304,19 +253,27 @@ export function renderSnapshotReviewHtml(reviewData) {
           .replaceAll("'", '&#39;');
       }
 
+      function anchorId(item) {
+        return ['capture', item.stageId, item.screenId, item.viewportId]
+          .join('-')
+          .replace(/[^a-zA-Z0-9_-]+/g, '-');
+      }
+
+      function quickCard(item) {
+        return '<a class="quick-card" href="#' + anchorId(item) + '">'
+          + '<img loading="lazy" src="' + item.currentLink + '" alt="' + escapeHtml(item.label) + ' current capture" />'
+          + '<div><strong>' + escapeHtml(item.label) + '</strong><div class="quick-caption">'
+          + escapeHtml(item.stageTitle) + ' · ' + escapeHtml(item.viewportId) + '</div></div>'
+          + '</a>';
+      }
+
       function captureCard(item) {
-        return \`
-          <article class="capture-card" data-stage="\${item.stageId}" data-viewport="\${item.viewportId}">
-            <div class="capture-header">
-              <div class="capture-title">\${escapeHtml(item.label)}</div>
-              <div class="capture-subtitle">\${escapeHtml(item.stageTitle)} · \${escapeHtml(item.viewportId)} · \${escapeHtml(item.locale)}</div>
-            </div>
-            <div class="preview-shell">
-              <img loading="lazy" src="\${item.currentLink}" alt="\${escapeHtml(item.label)} current capture" />
-            </div>
-            <div class="asset-links"><a href="\${item.currentLink}">Current</a></div>
-          </article>
-        \`;
+        return '<article class="capture-card" id="' + anchorId(item) + '">'
+          + '<div class="capture-title">' + escapeHtml(item.label) + '</div>'
+          + '<div class="capture-subtitle">' + escapeHtml(item.stageTitle) + ' · ' + escapeHtml(item.viewportId) + ' · ' + escapeHtml(item.locale) + '</div>'
+          + '<img loading="lazy" src="' + item.currentLink + '" alt="' + escapeHtml(item.label) + ' current capture" />'
+          + '<div class="asset-links"><a href="' + item.currentLink + '">Open image</a></div>'
+          + '</article>';
       }
 
       function render(state = {}) {
@@ -331,85 +288,61 @@ export function renderSnapshotReviewHtml(reviewData) {
         const stageOptions = ['all', ...new Set(reviewData.captures.map((item) => item.stageId))];
         const viewportOptions = ['all', ...new Set(reviewData.captures.map((item) => item.viewportId))];
 
-        app.innerHTML = \`
-          <section class="hero">
-            <div class="hero-grid">
-              <div>
-                <div class="eyebrow">UI Evidence Snapshot · \${escapeHtml(reviewData.run.id)}</div>
-                <h1>\${escapeHtml(reviewData.run.title)}</h1>
-                <p>\${escapeHtml(reviewData.run.description)}</p>
-                <div class="link-row">
-                  <a class="pill-link" href="\${reviewData.links.notes}"><span>Open notes</span><strong>Markdown</strong></a>
-                  <a class="pill-link" href="\${reviewData.links.report}"><span>Open report</span><strong>Summary</strong></a>
-                  <a class="pill-link" href="\${reviewData.links.manifest}"><span>Open manifest</span><strong>JSON</strong></a>
-                </div>
-              </div>
-              <div class="stats">
-                <div class="stat-card">
-                  <span class="stat-value">\${reviewData.counts.captures}</span>
-                  <span class="stat-label">Current captures</span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-value">\${reviewData.counts.overviews}</span>
-                  <span class="stat-label">Overview sheets</span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-value">\${new Date(reviewData.generatedAt).toLocaleString()}</span>
-                  <span class="stat-label">Last generated</span>
-                </div>
-              </div>
-            </div>
-          </section>
+        app.innerHTML = ''
+          + '<section class="panel header">'
+          + '  <div class="header-top"><span class="kicker">Snapshot Bundle</span><span class="meta-pill">' + escapeHtml(reviewData.run.id) + '</span></div>'
+          + '  <div><h1>' + escapeHtml(reviewData.run.title) + '</h1><p>' + escapeHtml(reviewData.run.description) + '</p></div>'
+          + '  <div class="meta-row">'
+          + '    <span class="summary-pill" data-tone="ok"><strong>' + reviewData.counts.captures + '/' + reviewData.counts.expectedCaptures + '</strong> reviewable</span>'
+          + '    <span class="summary-pill" data-tone="' + (reviewData.counts.failedCaptures ? 'danger' : 'ok') + '"><strong>' + reviewData.counts.failedCaptures + '</strong> failed</span>'
+          + '    <span class="summary-pill"><strong>' + new Date(reviewData.generatedAt).toLocaleString() + '</strong> generated</span>'
+          + '  </div>'
+          + '  <div class="link-row">'
+          + '    <a href="' + reviewData.links.notes + '">notes</a>'
+          + '    <a href="' + reviewData.links.report + '">report</a>'
+          + '    <a href="' + reviewData.links.manifest + '">manifest</a>'
+          + '  </div>'
+          + '</section>';
 
-          <section class="toolbar">
-            <label>
-              Stage
-              <select id="stage-filter">
-                \${stageOptions.map((option) => '<option value="' + option + '"' + (option === stageId ? ' selected' : '') + '>' + option + '</option>').join('')}
-              </select>
-            </label>
-            <label>
-              Viewport
-              <select id="viewport-filter">
-                \${viewportOptions.map((option) => '<option value="' + option + '"' + (option === viewport ? ' selected' : '') + '>' + option + '</option>').join('')}
-              </select>
-            </label>
-          </section>
+        if (reviewData.failures.length) {
+          app.innerHTML += '<section class="panel"><h2>Review First</h2><p>Capture failures should be checked before trusting the rest of the bundle.</p><div class="issue-list">'
+            + reviewData.failures.map((item) => '<article class="issue-card"><strong>' + escapeHtml(item.stageTitle) + ' / ' + escapeHtml(item.label)
+            + '</strong><div class="quick-caption">' + escapeHtml(item.viewportId) + ' · ' + escapeHtml(item.step) + '</div><p>'
+            + escapeHtml(item.message) + '</p></article>').join('')
+            + '</div></section>';
+        }
 
-          <section class="section">
-            <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:18px;">
-              <div>
-                <div class="eyebrow">Overview</div>
-                <h2 style="margin-top:10px;font-size:2rem;">Snapshot sheets</h2>
-              </div>
-            </div>
-            <div class="overview-grid">
-              \${reviewData.overviews.length
-                ? reviewData.overviews.map((item) => '<article class="overview-card"><img loading="lazy" src="' + item.path + '" alt="' + escapeHtml(item.label) + '" /></article>').join('')
-                : '<div class="overview-card"><div class="placeholder">Overview sheets appear here after a snapshot run.</div></div>'}
-            </div>
-          </section>
+        app.innerHTML += '<section class="panel">'
+          + '<div class="toolbar"><div><h2>Quick Scan</h2><p>Use the bundle directly. No local server is required.</p></div>'
+          + ((stageOptions.length > 2 || viewportOptions.length > 2)
+            ? '<div class="filter-group">'
+              + (stageOptions.length > 2 ? '<label class="filter-pill">stage <select id="stage-filter">' + stageOptions.map((option) => '<option value="' + option + '"' + (option === stageId ? ' selected' : '') + '>' + option + '</option>').join('') + '</select></label>' : '')
+              + (viewportOptions.length > 2 ? '<label class="filter-pill">viewport <select id="viewport-filter">' + viewportOptions.map((option) => '<option value="' + option + '"' + (option === viewport ? ' selected' : '') + '>' + option + '</option>').join('') + '</select></label>' : '')
+              + '</div>'
+            : '')
+          + '</div>'
+          + '<div class="quick-grid">'
+          + (captures.length ? captures.map((item) => quickCard(item)).join('') : '<div class="placeholder">No captures match the current filters.</div>')
+          + '</div></section>';
 
-          <section class="section">
-            <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:18px;">
-              <div>
-                <div class="eyebrow">Current UI</div>
-                <h2 style="margin-top:10px;font-size:2rem;">Review cards</h2>
-              </div>
-              <div class="stat-label">\${captures.length} card(s) visible</div>
-            </div>
-            <div class="cards">
-              \${captures.map((item) => captureCard(item)).join('') || '<div class="overview-card"><div class="placeholder">No captures match the current filters.</div></div>'}
-            </div>
-          </section>
-        \`;
+        app.innerHTML += '<section class="panel"><div class="toolbar"><div><h2>Detail Cards</h2><p>Open the original image only when the quick scan raises a question.</p></div><div class="quick-caption">' + captures.length + ' visible</div></div>'
+          + '<div class="cards">'
+          + (captures.length ? captures.map((item) => captureCard(item)).join('') : '<div class="placeholder">No captures match the current filters.</div>')
+          + '</div></section>';
 
-        document.getElementById('stage-filter').addEventListener('change', (event) => {
-          render({ ...state, stageId: event.target.value });
-        });
-        document.getElementById('viewport-filter').addEventListener('change', (event) => {
-          render({ ...state, viewport: event.target.value });
-        });
+        const stageFilter = document.getElementById('stage-filter');
+        if (stageFilter) {
+          stageFilter.addEventListener('change', (event) => {
+            render({ ...state, stageId: event.target.value });
+          });
+        }
+
+        const viewportFilter = document.getElementById('viewport-filter');
+        if (viewportFilter) {
+          viewportFilter.addEventListener('change', (event) => {
+            render({ ...state, viewport: event.target.value });
+          });
+        }
       }
 
       render();

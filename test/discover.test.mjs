@@ -132,9 +132,12 @@ test('discoverProject prefers workspace app hints in JS monorepos', async () => 
     assert.equal(result.preset, 'next-playwright');
     assert.equal(result.detected.selectedPackage.path, 'apps/web');
     assert.equal(result.suggestedConfig.capture.baseUrl, 'http://127.0.0.1:3100');
+    assert.equal(result.suggestedConfig.runtime.stateDir, 'ui-evidence/state');
+    assert.equal(result.suggestedConfig.runtime.tempDir, 'ui-evidence/tmp');
     assert.equal(result.suggestedConfig.servers.after.command, 'pnpm dev:web');
     assert.equal(result.suggestedConfig.servers.after.cwd, undefined);
     assert.equal(result.suggestedConfig.baseline.git.server.command, 'pnpm dev:web');
+    assert.equal(result.suggestedConfig.baseline.git.worktreeDir, 'ui-evidence/tmp/baseline/main');
     assert.deepEqual(
       result.detected.workspacePackages.map((candidate) => candidate.path).sort(),
       ['.', 'apps/web'],

@@ -45,6 +45,8 @@ test('loadConfig defaults to ui-evidence/config.yaml', async () => {
     assert.ok(config.meta.configPath.endsWith(path.join('ui-evidence', 'config.yaml')));
     assert.equal(config.meta.projectRoot, resolvedTempDir);
     assert.equal(config.meta.artifactsRoot, path.join(resolvedTempDir, 'ui-evidence', 'screenshots'));
+    assert.equal(config.meta.runtimeStateRoot, path.join(resolvedTempDir, 'ui-evidence', 'state'));
+    assert.equal(config.meta.runtimeTempRoot, path.join(resolvedTempDir, 'ui-evidence', 'tmp'));
   } finally {
     process.chdir(previousCwd);
     await rm(tempDir, { recursive: true, force: true });

@@ -6,6 +6,8 @@ import { ensureDir, fileExists } from '../util/fs.mjs';
 import { inferLocale, resolveBaseUrl, resolveCapturePlan } from '../util/selection.mjs';
 import { loadHook } from '../util/hooks.mjs';
 import { resolveProjectPath } from '../../config/load-config.mjs';
+import { createLogger } from '../util/logging.mjs';
+import { createRunId, createRuntimeHandle, createStateApi } from '../runtime/state-store.mjs';
 import {
   buildCaptureStateEntry,
   buildCaptureStateKey,
@@ -226,8 +228,10 @@ async function prepareScreenContext({
   baseUrl,
   language,
   execution = null,
+  runtimeHandle = createRuntimeHandle(config),
 }) {
   const contextOptions = buildContextOptions(viewport);
+  const stateApi = createStateApi(config);
   const runtime = {
     context: null,
     page: null,
@@ -286,6 +290,8 @@ async function prepareScreenContext({
             phase,
             baseUrl,
             language,
+            runtime: runtimeHandle,
+            state: stateApi,
           });
         }
       },
@@ -333,6 +339,8 @@ async function prepareScreenContext({
             phase,
             baseUrl,
             language,
+            runtime: runtimeHandle,
+            state: stateApi,
           });
           await settlePage(runtime.page, config.capture);
         }
@@ -346,7 +354,7 @@ async function prepareScreenContext({
   }
 }
 
-export async function openPreparedScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language }) {
+export async function openPreparedScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language, runtimeHandle }) {
   const prepared = await prepareScreenContext({
     browser,
     config,
@@ -356,6 +364,7 @@ export async function openPreparedScreen({ browser, config, stage, screen, viewp
     phase,
     baseUrl,
     language,
+    runtimeHandle,
   });
 
   return {
@@ -364,7 +373,7 @@ export async function openPreparedScreen({ browser, config, stage, screen, viewp
   };
 }
 
-async function captureScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language, outputPath }) {
+async function captureScreen({ browser, config, stage, screen, viewport, phase, baseUrl, language, outputPath, runtimeHandle }) {
   const execution = createExecutionRecord();
   const captureStartedAt = Date.now();
 
@@ -379,6 +388,7 @@ async function captureScreen({ browser, config, stage, screen, viewport, phase, 
       baseUrl,
       language,
       execution,
+      runtimeHandle,
     });
 
     try {
@@ -448,7 +458,10 @@ export async function captureResolvedPlan({
   outputPathResolver = buildPhaseOutputPath,
   resume = false,
   persistState = true,
+  logOptions = {},
+  runId = createRunId(phase),
 }) {
+  const logger = createLogger(logOptions);
   const browser = await chromium.launch({ headless: config.capture.browser.headless });
   const outputs = [];
   const failures = [];
@@ -505,7 +518,7 @@ export async function captureResolvedPlan({
               viewportId: viewport.id,
               outputPath: plannedOutputPath,
             });
-            console.log(`skipped ${stage.id}/${phase}/${screen.id} (${viewport.id})`);
+            logger.detail(`skipped ${stage.id}/${phase}/${screen.id} (${viewport.id})`);
             continue;
           }
 
@@ -520,6 +533,7 @@ export async function captureResolvedPlan({
             baseUrl,
             language,
             outputPath: plannedOutputPath,
+            runtimeHandle: createRuntimeHandle(config, runId),
           });
           const locale = inferLocale(screen);
           const stateKey = buildCaptureStateKey({
@@ -547,12 +561,13 @@ export async function captureResolvedPlan({
               stageId: stage.id,
               stageTitle: stage.title,
               screenId: screen.id,
+              fileId: screen.fileId ?? screen.id,
               label: screen.label,
               locale,
               viewportId: viewport.id,
               outputPath: result.outputPath,
             });
-            console.log(`captured ${stage.id}/${phase}/${screen.id} (${viewport.id})`);
+            logger.detail(`captured ${stage.id}/${phase}/${screen.id} (${viewport.id})`);
             continue;
           }
 
@@ -560,13 +575,14 @@ export async function captureResolvedPlan({
             stageId: stage.id,
             stageTitle: stage.title,
             screenId: screen.id,
+            fileId: screen.fileId ?? screen.id,
             label: screen.label,
             locale,
             viewportId: viewport.id,
             outputPath: plannedOutputPath,
             execution: result.execution,
           });
-          console.error(
+          logger.error(
             `failed ${stage.id}/${phase}/${screen.id} (${viewport.id}): ${result.execution.failure?.step ?? 'capture'} ${result.execution.failure?.message ?? 'unknown error'}`,
           );
         }
@@ -577,6 +593,7 @@ export async function captureResolvedPlan({
   }
 
   return {
+    runId,
     outputs,
     failures,
     skipped,
@@ -595,14 +612,20 @@ export async function captureStages({
   stageArg,
   screenIds = [],
   viewportIds = [],
+  profileId = null,
+  paramsFilter = {},
   baseUrlOverride,
   language,
   resume = false,
+  logOptions = {},
+  runId = createRunId(phase),
 }) {
   const plan = resolveCapturePlan(config, {
     stageArg,
     screenIds,
     viewportIds,
+    profileId,
+    paramsFilter,
   });
 
   for (const { stage } of plan.selections) {
@@ -616,5 +639,7 @@ export async function captureStages({
     baseUrlOverride,
     language,
     resume,
+    logOptions,
+    runId,
   });
 }

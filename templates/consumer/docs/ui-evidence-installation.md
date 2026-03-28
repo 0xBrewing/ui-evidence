@@ -34,9 +34,12 @@ can run with minimal follow-up questions.
 
 ```bash
 {{UI_EVIDENCE_EXEC}} doctor --config {{CONFIG_PATH}}
+{{UI_EVIDENCE_EXEC}} doctor --config {{CONFIG_PATH}} --ready
 ```
 
 4. If setup is incomplete, fix the config, hooks, or unresolved values and run `doctor` again.
+
+If generated skill/docs files drift later, run `{{UI_EVIDENCE_EXEC}} install --sync`.
 
 5. When setup is complete, use one of:
 
@@ -44,6 +47,7 @@ can run with minimal follow-up questions.
 {{UI_EVIDENCE_EXEC}} run --config {{CONFIG_PATH}} --stage <stage-id>
 {{UI_EVIDENCE_EXEC}} run --config {{CONFIG_PATH}} --stage <stage-id> --before-ref main
 {{UI_EVIDENCE_EXEC}} run --config {{CONFIG_PATH}} --stage <stage-id> --after-attach http://127.0.0.1:3000 --resume
+{{UI_EVIDENCE_EXEC}} snapshot --config {{CONFIG_PATH}} --stage <stage-id> --profile mobile-en
 ```
 
 6. Return these paths after execution:
@@ -52,6 +56,8 @@ can run with minimal follow-up questions.
 - `report.<lang>.md`
 - `manifest.json`
 - key pair and overview images
+
+Open `review/index.html` directly from disk. A local web server is not required. If a stage review reuses snapshot `current` captures, the stage folder is still self-contained and portable on its own.
 
 ## Natural-language requests
 

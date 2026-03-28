@@ -15,7 +15,7 @@ function readArg(flag) {
   return process.argv[index + 1] ?? null;
 }
 
-const sourceDir = path.resolve(repoRoot, readArg('--source') ?? path.join('skills', 'ui-evidence'));
+const sourceDir = path.resolve(repoRoot, readArg('--source') ?? path.join('agent-skill', 'ui-evidence'));
 const mirrorDir = path.resolve(
   repoRoot,
   readArg('--mirror') ?? path.join('plugins', 'ui-evidence', 'skills', 'ui-evidence'),

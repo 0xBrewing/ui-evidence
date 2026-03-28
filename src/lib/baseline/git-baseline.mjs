@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { resolveProjectPath } from '../../config/load-config.mjs';
+import { buildDefaultBaselineWorktreeDir } from '../layout/default-layout.mjs';
 import { ensureDir, removeDir } from '../util/fs.mjs';
 import { runCommand, runCommandArgs, runCommandSync } from '../util/process.mjs';
 
@@ -83,7 +84,7 @@ export function resolveBaselineOptions(config, beforeRefOverride) {
 
   const worktreeDir = resolveProjectPath(
     config,
-    gitConfig.worktreeDir ?? path.join('tmp', 'ui-evidence', slugifyRef(ref)),
+    gitConfig.worktreeDir ?? buildDefaultBaselineWorktreeDir(slugifyRef(ref)),
   );
 
   return {

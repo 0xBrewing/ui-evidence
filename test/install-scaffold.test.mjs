@@ -48,6 +48,9 @@ test('scaffoldConsumerRepo writes bootstrap files for Claude and Codex', async (
     const codexSkillExists = await fileExists(
       path.join(tempDir, '.agents', 'skills', 'ui-evidence', 'SKILL.md'),
     );
+    const codexSkillProvenanceExists = await fileExists(
+      path.join(tempDir, '.agents', 'skills', 'ui-evidence', '.ui-evidence-provenance.json'),
+    );
     const legacyCodexSkillExists = await fileExists(path.join(tempDir, 'skills', 'ui-evidence', 'SKILL.md'));
     const claudeSkillExists = await fileExists(path.join(tempDir, '.claude', 'skills', 'ui-evidence', 'SKILL.md'));
 
@@ -58,6 +61,7 @@ test('scaffoldConsumerRepo writes bootstrap files for Claude and Codex', async (
     assert.match(claudeNotes, /ui-evidence/);
     assert.match(agentsNotes, /\.agents\/skills\/ui-evidence\//);
     assert.equal(codexSkillExists, true);
+    assert.equal(codexSkillProvenanceExists, true);
     assert.equal(legacyCodexSkillExists, false);
     assert.equal(claudeSkillExists, true);
     assert.equal(result.discovery.packageManager, 'pnpm');

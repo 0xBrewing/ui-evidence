@@ -71,6 +71,53 @@ function buildSnapshotDescription(plan) {
   return `Current UI snapshot for ${stageCount} stage(s) and ${screenCount} selected screen(s).`;
 }
 
+function relativeConfigPath(config) {
+  return toPosixPath(path.relative(config.meta.projectRoot, config.meta.configPath));
+}
+
+function formatParamsOption(paramsFilter = {}) {
+  const entries = Object.entries(paramsFilter ?? {});
+  if (!entries.length) {
+    return null;
+  }
+  return entries.map(([key, value]) => `${key}=${value}`).join(',');
+}
+
+function buildSnapshotCommand(config, {
+  scopeId = null,
+  stageArg = 'all',
+  screenIds = [],
+  viewportIds = [],
+  profileId = null,
+  paramsFilter = {},
+  label = null,
+  command = 'snapshot',
+}) {
+  const parts = ['ui-evidence', command, '--config', relativeConfigPath(config)];
+  if (scopeId) {
+    parts.push('--scope', scopeId);
+  } else if (stageArg && stageArg !== 'all') {
+    parts.push('--stage', stageArg);
+  }
+  if (screenIds.length) {
+    parts.push('--screens', screenIds.join(','));
+  }
+  if (viewportIds.length) {
+    parts.push('--viewports', viewportIds.join(','));
+  }
+  if (profileId) {
+    parts.push('--profile', profileId);
+  }
+  const paramsOption = formatParamsOption(paramsFilter);
+  if (paramsOption) {
+    parts.push('--params', paramsOption);
+  }
+  if (label) {
+    parts.push('--label', label);
+  }
+  return parts.join(' ');
+}
+
 function buildSelectionSummary(plan) {
   return plan.selections.map(({ stage, screens, viewports }) => ({
     stageId: stage.id,
@@ -137,14 +184,15 @@ function fitWithin(width, height, maxWidth, maxHeight) {
 }
 
 async function buildSnapshotOverviewImage(group, outputPath) {
+  const density = 2;
   const columns = 2;
-  const pagePadding = 28;
-  const gap = 20;
-  const titleHeight = 60;
-  const cardWidth = 420;
-  const cardHeight = 300;
-  const cardInnerPadding = 14;
-  const labelHeight = 42;
+  const pagePadding = 28 * density;
+  const gap = 20 * density;
+  const titleHeight = 60 * density;
+  const cardWidth = 420 * density;
+  const cardHeight = 300 * density;
+  const cardInnerPadding = 14 * density;
+  const labelHeight = 42 * density;
   const imageMaxWidth = cardWidth - cardInnerPadding * 2;
   const imageMaxHeight = cardHeight - cardInnerPadding * 2 - labelHeight;
 
@@ -176,7 +224,7 @@ async function buildSnapshotOverviewImage(group, outputPath) {
         height: titleHeight,
         text: `${group.stageId} / ${group.viewportId} / snapshot`,
         color: '#2b1e14',
-        fontSize: 24,
+        fontSize: 48,
         weight: 700,
       }),
       left: pagePadding,
@@ -209,7 +257,7 @@ async function buildSnapshotOverviewImage(group, outputPath) {
         text: capture.label,
         fill: '#e7d7c5',
         color: '#5f4528',
-        fontSize: 16,
+        fontSize: 32,
         weight: 700,
       }),
       left: cardLeft + cardInnerPadding,
@@ -257,31 +305,40 @@ function renderKoreanNotes(snapshot) {
   const targetLines = snapshot.selection
     .map((item) => `- ${item.stageTitle} (\`${item.stageId}\`): ${item.screenLabels.join(', ')}`)
     .join('\n');
+  const screenNotes = snapshot.selection
+    .flatMap((item) => item.screenLabels.map((label, index) => `### ${label} (\`${item.screenIds[index]}\`)\n- `))
+    .join('\n');
 
   return `# ${snapshot.run.title}
 
-## 작업 목적
+## 한줄 목적
 - ${snapshot.run.description}
 
-## 요청 범위
+## 실행 범위
 - 실행 ID: \`${snapshot.run.id}\`
 - 선택 방식: ${snapshot.run.selectionMode}
 - scope: ${snapshot.scope ? `\`${snapshot.scope.id}\`` : '없음'}
 - 기준 URL: ${snapshot.run.baseUrl}
 
+## 먼저 확인할 것
+- 실패한 캡처가 있는지
+- 관련 화면끼리 버튼, 타이포, 간격이 일관적인지
+- 기대한 변경 외 회귀가 보이는지
+
 ## 캡처 대상
 ${targetLines}
 
-## 현재 UI 관찰
+## 화면별 메모
+${screenNotes}
+
+## 회귀 의심 / 확인 필요
 - 
 
-## 체크 포인트
-- 누락된 화면
-- 일관성 없는 버튼/타이포/간격
-- 관련 화면 간 스타일 차이
+## 허용 가능한 차이
+- 
 
-## 산출물 메모
-- review HTML에서 먼저 훑어보고, 필요한 세부 내용만 여기에 기록합니다.
+## 후속 조치
+- 
 `;
 }
 
@@ -289,32 +346,53 @@ function renderEnglishNotes(snapshot) {
   const targetLines = snapshot.selection
     .map((item) => `- ${item.stageTitle} (\`${item.stageId}\`): ${item.screenLabels.join(', ')}`)
     .join('\n');
+  const screenNotes = snapshot.selection
+    .flatMap((item) => item.screenLabels.map((label, index) => `### ${label} (\`${item.screenIds[index]}\`)\n- `))
+    .join('\n');
 
   return `# ${snapshot.run.title}
 
 ## Purpose
 - ${snapshot.run.description}
 
-## Requested Scope
+## Run Scope
 - Run ID: \`${snapshot.run.id}\`
 - Selection mode: ${snapshot.run.selectionMode}
 - scope: ${snapshot.scope ? `\`${snapshot.scope.id}\`` : 'none'}
 - base URL: ${snapshot.run.baseUrl}
 
+## Review First
+- Check whether any capture failed.
+- Confirm the intended change is consistent across related screens.
+- Note only meaningful regressions or rollout mismatches.
+
 ## Capture Targets
 ${targetLines}
 
-## Current UI Notes
+## Screen Notes
+${screenNotes}
+
+## Suspected Regressions / Needs Confirmation
 - 
 
-## Checklist
-- missed screens
-- inconsistent button, typography, or spacing changes
-- related screens that drifted from the intended rollout
+## Acceptable Differences
+- 
 
-## Artifact Notes
-- Scan the review HTML first, then keep specific observations here.
+## Follow-up Actions
+- 
 `;
+}
+
+function renderFailureListKo(snapshot) {
+  return snapshot.failures?.map((item) =>
+    `- ${item.stageTitle} / ${item.label} / ${item.viewportId}: ${item.step} - ${item.message}`,
+  ).join('\n') || '- 없음';
+}
+
+function renderFailureListEn(snapshot) {
+  return snapshot.failures?.map((item) =>
+    `- ${item.stageTitle} / ${item.label} / ${item.viewportId}: ${item.step} - ${item.message}`,
+  ).join('\n') || '- none';
 }
 
 function renderKoreanReport(snapshot) {
@@ -323,27 +401,22 @@ function renderKoreanReport(snapshot) {
 ## 목적
 - ${snapshot.run.description}
 
-## 실행 정보
-- 실행 ID: \`${snapshot.run.id}\`
-- 선택 방식: ${snapshot.run.selectionMode}
-- scope: ${snapshot.scope ? `\`${snapshot.scope.id}\`` : '없음'}
+## 한줄 요약
+- 검토 가능한 current 캡처: ${snapshot.counts.captures}/${snapshot.counts.expectedCaptures}
+- 실패한 캡처: ${snapshot.counts.failedCaptures}
+- 번들 형태: self-contained
 
-## 산출물 요약
-- stage: ${snapshot.counts.stages}
-- screen: ${snapshot.counts.screens}
-- current 캡처: ${snapshot.counts.captures}
-- overview 이미지: ${snapshot.counts.overviews}
+## 먼저 볼 항목
+${renderFailureListKo(snapshot)}
 
-## 참고 경로
+## 바로 다시 실행
+- snapshot 재실행: \`${snapshot.commands.rerun}\`
+- 번들 다시 생성: \`${snapshot.commands.rebuild}\`
+
+## 참고 링크
 - notes: \`${snapshot.artifacts.notes}\`
 - manifest: \`${snapshot.artifacts.manifest}\`
 - review: \`${snapshot.artifacts.review}\`
-
-## overview 이미지
-${snapshot.artifacts.overviews.map((item) => `- \`${item}\``).join('\n') || '- 없음'}
-
-## current 이미지
-${snapshot.artifacts.current.map((item) => `- \`${item}\``).join('\n') || '- 없음'}
 `;
 }
 
@@ -353,27 +426,22 @@ function renderEnglishReport(snapshot) {
 ## Purpose
 - ${snapshot.run.description}
 
-## Run Details
-- Run ID: \`${snapshot.run.id}\`
-- Selection mode: ${snapshot.run.selectionMode}
-- scope: ${snapshot.scope ? `\`${snapshot.scope.id}\`` : 'none'}
+## Summary
+- Reviewable current captures: ${snapshot.counts.captures}/${snapshot.counts.expectedCaptures}
+- Failed captures: ${snapshot.counts.failedCaptures}
+- Bundle type: self-contained
 
-## Artifact Summary
-- stages: ${snapshot.counts.stages}
-- screens: ${snapshot.counts.screens}
-- current captures: ${snapshot.counts.captures}
-- overview sheets: ${snapshot.counts.overviews}
+## Review First
+${renderFailureListEn(snapshot)}
+
+## Rerun
+- snapshot: \`${snapshot.commands.rerun}\`
+- rebuild bundle: \`${snapshot.commands.rebuild}\`
 
 ## References
 - notes: \`${snapshot.artifacts.notes}\`
 - manifest: \`${snapshot.artifacts.manifest}\`
 - review: \`${snapshot.artifacts.review}\`
-
-## Overview Images
-${snapshot.artifacts.overviews.map((item) => `- \`${item}\``).join('\n') || '- none'}
-
-## Current Images
-${snapshot.artifacts.current.map((item) => `- \`${item}\``).join('\n') || '- none'}
 `;
 }
 
@@ -382,15 +450,13 @@ function buildSnapshotReviewData(config, snapshot, paths) {
     generatedAt: snapshot.generatedAt,
     run: snapshot.run,
     counts: snapshot.counts,
+    bundle: snapshot.bundle,
+    failures: snapshot.failures,
     links: {
       notes: relativeFromReview(paths.reviewDir, config.meta.projectRoot, snapshot.artifacts.notes),
       report: relativeFromReview(paths.reviewDir, config.meta.projectRoot, snapshot.artifacts.report),
       manifest: relativeFromReview(paths.reviewDir, config.meta.projectRoot, snapshot.artifacts.manifest),
     },
-    overviews: snapshot.overviewEntries.map((item) => ({
-      path: relativeFromReview(paths.reviewDir, config.meta.projectRoot, item.path),
-      label: path.basename(item.path),
-    })),
     captures: snapshot.captures.map((item) => ({
       ...item,
       currentLink: relativeFromReview(paths.reviewDir, config.meta.projectRoot, item.current),
@@ -404,16 +470,21 @@ export async function runSnapshot({
   stageArg = 'all',
   screenIds = [],
   viewportIds = [],
+  profileId = null,
+  paramsFilter = {},
   baseUrlOverride,
   label = null,
   language = 'en',
   now = new Date(),
+  logOptions = {},
 }) {
   const plan = resolveCapturePlan(config, {
     scopeId,
     stageArg,
     screenIds,
     viewportIds,
+    profileId,
+    paramsFilter,
   });
   const runId = buildRunId(now, label);
   const generatedAt = (now instanceof Date ? now : new Date(now)).toISOString();
@@ -434,6 +505,8 @@ export async function runSnapshot({
     language,
     outputPathResolver: ({ stage, screen, viewport }) => buildCaptureOutputPath(paths, stage, screen, viewport),
     persistState: false,
+    logOptions,
+    runId,
   });
   const overviews = await buildSnapshotOverviews(config, paths, captured.outputs);
 
@@ -442,6 +515,7 @@ export async function runSnapshot({
     stageId: item.stageId,
     stageTitle: item.stageTitle,
     screenId: item.screenId,
+    fileId: item.fileId,
     label: item.label,
     locale: item.locale,
     viewportId: item.viewportId,
@@ -481,11 +555,47 @@ export async function runSnapshot({
       current: captures.map((item) => item.current),
       overviews: overviewEntries.map((item) => item.path),
     },
+    bundle: {
+      selfContained: true,
+      origin: 'snapshot-run',
+    },
+    failures: captured.failures.map((item) => ({
+      stageId: item.stageId,
+      stageTitle: item.stageTitle,
+      screenId: item.screenId,
+      fileId: item.fileId,
+      label: item.label,
+      locale: item.locale,
+      viewportId: item.viewportId,
+      step: item.execution.failure?.step ?? 'capture',
+      message: item.execution.failure?.message ?? 'Unknown failure',
+    })),
     captures,
     overviewEntries,
+    commands: {
+      rerun: buildSnapshotCommand(config, {
+        scopeId,
+        stageArg,
+        screenIds,
+        viewportIds,
+        profileId,
+        paramsFilter,
+        label,
+      }),
+      rebuild: buildSnapshotCommand(config, {
+        scopeId,
+        stageArg,
+        screenIds,
+        viewportIds,
+        profileId,
+        paramsFilter,
+        label,
+      }),
+    },
     counts: {
       stages: selection.length,
       screens: selection.reduce((sum, item) => sum + item.screenIds.length, 0),
+      expectedCaptures: plan.selections.reduce((sum, item) => sum + item.screens.length * item.viewports.length, 0),
       captures: captures.length,
       overviews: overviewEntries.length,
       failedCaptures: captured.counts.failed,
@@ -510,5 +620,6 @@ export async function runSnapshot({
     manifestPath: paths.manifestPath,
     counts: snapshot.counts,
     failedCaptures: captured.counts.failed,
+    failures: captured.failures,
   };
 }

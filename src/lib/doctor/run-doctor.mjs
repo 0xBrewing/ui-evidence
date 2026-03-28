@@ -1,15 +1,30 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { readFile } from 'node:fs/promises';
 import { chromium } from '@playwright/test';
 import { loadConfig, resolveProjectPath } from '../../config/load-config.mjs';
-import { openPreparedScreen } from '../capture/playwright-capture.mjs';
 import { discoverProject } from '../discover/discover-project.mjs';
 import { resolveBaselineOptions, prepareGitBaseline } from '../baseline/git-baseline.mjs';
-import { DEFAULT_CONFIG_PATH, detectLegacyLayout, formatLegacyLayoutWarning } from '../layout/default-layout.mjs';
+import {
+  DEFAULT_CONFIG_PATH,
+  DEFAULT_INSTALLATION_DOC_PATH,
+  detectLegacyLayout,
+  detectLegacyRuntimeLayout,
+  formatLegacyLayoutWarning,
+  formatLegacyRuntimeLayoutWarning,
+} from '../layout/default-layout.mjs';
 import { resolveServerSpec, startServer, stopServer } from '../server/process-server.mjs';
+import { runReadyValidation } from './ready-validation.mjs';
 import { loadHook } from '../util/hooks.mjs';
 import { fileExists } from '../util/fs.mjs';
 import { runCommandSync } from '../util/process.mjs';
-import { resolveBaseUrl, resolveCapturePlan, selectViewports } from '../util/selection.mjs';
+import { hashDirectory, hashFile, readDirectoryProvenance, readProvenanceHeader } from '../util/provenance.mjs';
+import { resolveCapturePlan } from '../util/selection.mjs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PACKAGE_ROOT = path.resolve(__dirname, '..', '..', '..');
+const CANONICAL_SKILL_SOURCE_DIR = path.join(PACKAGE_ROOT, 'agent-skill', 'ui-evidence');
 
 async function probeUrl(url, timeoutMs = 3_000) {
   const controller = new AbortController();
@@ -38,71 +53,98 @@ function makeCheck(key, status, message) {
   return { key, status, message };
 }
 
-async function runDeepPhaseValidation({
+async function runReadyPhaseValidation({
   checks,
   config,
   phase,
-  scopeId,
-  stageArg,
-  screenIds,
+  plan,
   baseUrlOverride,
   serverOverrides,
   serverLabel,
   language,
 }) {
   let serverHandle = null;
-  let browser = null;
 
   try {
     serverHandle = await startServer(config, phase, serverOverrides);
-    browser = await chromium.launch({ headless: true });
-    checks.push(makeCheck(`deep:${phase}:server`, 'pass', `Deep validation is using ${resolveBaseUrl(config, phase, baseUrlOverride)}.`));
+    checks.push(makeCheck(`ready:${phase}:server`, 'pass', `Ready validation is using ${baseUrlOverride ?? config.servers?.[phase]?.baseUrl ?? config.capture.baseUrl}.`));
   } catch (error) {
     checks.push(makeCheck(
-      `deep:${phase}:server`,
+      `ready:${phase}:server`,
       'fail',
       `Unable to prepare ${serverLabel}: ${error instanceof Error ? error.message : String(error)}`,
     ));
     await stopServer(serverHandle);
-    await browser?.close().catch(() => {});
     return;
   }
 
   try {
-    const baseUrl = resolveBaseUrl(config, phase, baseUrlOverride);
-    const plan = resolveCapturePlan(config, {
-      scopeId,
-      stageArg,
-      screenIds,
-      viewportIds: [],
+    const result = await runReadyValidation({
+      config,
+      phase,
+      selections: plan.selections,
+      baseUrlOverride,
+      language,
     });
-    for (const selection of plan.selections) {
-      const { stage, screens, viewports } = selection;
-      const viewport = viewports[0] ?? selectViewports(config, stage, [])[0];
-      for (const screen of screens) {
-        const key = `deep:${phase}:${stage.id}/${screen.id}`;
-        try {
-          const { context } = await openPreparedScreen({
-            browser,
-            config,
-            stage,
-            screen,
-            viewport,
-            phase,
-            baseUrl,
-            language,
-          });
-          await context.close();
-          checks.push(makeCheck(key, 'pass', `${screen.path} is reachable and its wait target resolves (${viewport.id}).`));
-        } catch (error) {
-          checks.push(makeCheck(key, 'fail', error instanceof Error ? error.message : String(error)));
-        }
-      }
+    for (const check of result.checks) {
+      checks.push(makeCheck(`ready:${phase}:${check.stageId}/${check.screenId}`, check.status, check.message));
     }
   } finally {
     await stopServer(serverHandle);
-    await browser?.close().catch(() => {});
   }
+}
+
+async function appendGeneratedDriftChecks(checks, cwd) {
+  const canonicalSkillDigest = await hashDirectory(CANONICAL_SKILL_SOURCE_DIR);
+  const installTemplateDigest = await hashFile(path.join(PACKAGE_ROOT, 'templates', 'consumer', 'docs', 'ui-evidence-installation.md'));
+  const claudeCommandDigest = await hashFile(path.join(PACKAGE_ROOT, 'templates', 'consumer', '.claude', 'commands', 'ui-evidence.md'));
+  const managedFiles = [
+    { key: 'generated:install-doc', absolutePath: path.resolve(cwd, DEFAULT_INSTALLATION_DOC_PATH), digest: installTemplateDigest },
+    { key: 'generated:claude-command', absolutePath: path.resolve(cwd, '.claude', 'commands', 'ui-evidence.md'), digest: claudeCommandDigest },
+  ];
+
+  for (const managedFile of managedFiles) {
+    if (!(await fileExists(managedFile.absolutePath))) {
+      continue;
+    }
+    const content = await pathToContent(managedFile.absolutePath);
+    const provenance = readProvenanceHeader(managedFile.absolutePath, content);
+    if (!provenance) {
+      continue;
+    }
+    checks.push(makeCheck(
+      managedFile.key,
+      provenance.sourceDigest === managedFile.digest ? 'pass' : 'warn',
+      provenance.sourceDigest === managedFile.digest
+        ? `${path.relative(cwd, managedFile.absolutePath)} is in sync.`
+        : `${path.relative(cwd, managedFile.absolutePath)} is stale. Run "ui-evidence install --sync".`,
+    ));
+  }
+
+  const skillCopies = [
+    { key: 'generated:codex-skill', absolutePath: path.resolve(cwd, '.agents', 'skills', 'ui-evidence') },
+    { key: 'generated:claude-skill', absolutePath: path.resolve(cwd, '.claude', 'skills', 'ui-evidence') },
+  ];
+  for (const skillCopy of skillCopies) {
+    if (!(await fileExists(skillCopy.absolutePath))) {
+      continue;
+    }
+    const provenance = await readDirectoryProvenance(skillCopy.absolutePath);
+    if (!provenance) {
+      continue;
+    }
+    checks.push(makeCheck(
+      skillCopy.key,
+      provenance.sourceDigest === canonicalSkillDigest ? 'pass' : 'warn',
+      provenance.sourceDigest === canonicalSkillDigest
+        ? `${path.relative(cwd, skillCopy.absolutePath)} is in sync.`
+        : `${path.relative(cwd, skillCopy.absolutePath)} is stale. Run "ui-evidence install --sync".`,
+    ));
+  }
+}
+
+async function pathToContent(filePath) {
+  return readFile(filePath, 'utf8');
 }
 
 export async function runDoctor(options = {}) {
@@ -110,6 +152,8 @@ export async function runDoctor(options = {}) {
   const configPath = options.config ?? DEFAULT_CONFIG_PATH;
   const configExists = await fileExists(path.resolve(process.cwd(), configPath));
   const legacyPaths = await detectLegacyLayout(process.cwd());
+  const legacyRuntimePaths = await detectLegacyRuntimeLayout(process.cwd());
+  const ready = Boolean(options.ready || options.deep);
 
   checks.push(makeCheck(
     'node-version',
@@ -127,6 +171,9 @@ export async function runDoctor(options = {}) {
 
   if (legacyPaths.length) {
     checks.push(makeCheck('layout', 'warn', formatLegacyLayoutWarning(legacyPaths)));
+  }
+  if (legacyRuntimePaths.length) {
+    checks.push(makeCheck('runtime-layout', 'warn', formatLegacyRuntimeLayoutWarning(legacyRuntimePaths)));
   }
 
   if (!configExists) {
@@ -152,19 +199,22 @@ export async function runDoctor(options = {}) {
   }
 
   let selectionOk = true;
+  let selectionPlan = null;
   try {
-    const selectionPlan = resolveCapturePlan(config, {
+    selectionPlan = resolveCapturePlan(config, {
       scopeId: options.scopeId ?? null,
       stageArg: options.stageArg ?? 'all',
       screenIds: options.screenIds ?? [],
       viewportIds: [],
+      profileId: options.profileId ?? null,
+      paramsFilter: options.paramsFilter ?? {},
     });
     checks.push(makeCheck(
       'selection',
       'pass',
       selectionPlan.scope
         ? `Scope ${selectionPlan.scope.id} resolves to ${selectionPlan.selections.length} stage selection(s).`
-        : `Selected ${selectionPlan.selections.length} stage selection(s).`,
+        : `Selected ${selectionPlan.selections.length} stage selection(s).${selectionPlan.profile ? ` Profile: ${selectionPlan.profile.id}.` : ''}`,
     ));
   } catch (error) {
     selectionOk = false;
@@ -187,6 +237,8 @@ export async function runDoctor(options = {}) {
         : `Not reachable yet: ${url}${result.error ? ` (${result.error})` : ''}`,
     ));
   }
+
+  await appendGeneratedDriftChecks(checks, process.cwd());
 
   for (const stage of config.stages) {
     for (const screen of stage.screens) {
@@ -250,15 +302,13 @@ export async function runDoctor(options = {}) {
     }
   }
 
-  if (options.deep && selectionOk) {
+  if (ready && selectionOk && selectionPlan) {
     const language = config.report?.language ?? config.artifacts.reportLanguage ?? 'en';
-    await runDeepPhaseValidation({
+    await runReadyPhaseValidation({
       checks,
       config,
       phase: 'after',
-      scopeId: options.scopeId ?? null,
-      stageArg: options.stageArg ?? 'all',
-      screenIds: options.screenIds ?? [],
+      plan: selectionPlan,
       baseUrlOverride: undefined,
       serverOverrides: {},
       serverLabel: 'after server',
@@ -276,13 +326,11 @@ export async function runDoctor(options = {}) {
             `Baseline ref "${baseline.ref}" does not provide a reusable baseUrl for deep validation.`,
           ));
         } else {
-          await runDeepPhaseValidation({
+          await runReadyPhaseValidation({
             checks,
             config,
             phase: 'before',
-            scopeId: options.scopeId ?? null,
-            stageArg: options.stageArg ?? 'all',
-            screenIds: options.screenIds ?? [],
+            plan: selectionPlan,
             baseUrlOverride: preparedBaseline.server.baseUrl,
             serverOverrides: {
               server: preparedBaseline.server,

@@ -6,11 +6,14 @@ import { directoryExists, fileExists, toPosixPath } from '../util/fs.mjs';
 import { runCommandSync } from '../util/process.mjs';
 import {
   DEFAULT_ARTIFACTS_ROOT,
+  buildDefaultBaselineWorktreeDir,
   DEFAULT_CONFIG_PATH,
   buildCanonicalSuggestedConfig,
   detectExistingConfigPath,
   detectLegacyLayout,
+  detectLegacyRuntimeLayout,
   formatLegacyLayoutWarning,
+  formatLegacyRuntimeLayoutWarning,
 } from '../layout/default-layout.mjs';
 
 const CODE_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.html'];
@@ -947,7 +950,7 @@ function buildSuggestedConfig({
     config.baseline = {
       git: {
         ref: baselineRef,
-        worktreeDir: `tmp/ui-evidence/${sanitizeId(baselineRef, 'baseline')}`,
+        worktreeDir: buildDefaultBaselineWorktreeDir(sanitizeId(baselineRef, 'baseline')),
         ...(serverCommand?.command
           ? {
               installCommand: inferInstallCommand(cwd, packageManager),
@@ -1044,6 +1047,7 @@ export async function discoverProject(options = {}) {
   const screenSuggestion = buildScreenSuggestion(selectedPackage.routeEntries, selectedPackage.testIdEntries, preset);
   const baselineRef = detectGitBaselineRef(cwd);
   const legacyPaths = await detectLegacyLayout(cwd);
+  const legacyRuntimePaths = await detectLegacyRuntimeLayout(cwd);
   const suggestedConfig = buildSuggestedConfig({
     cwd,
     packageManager,
@@ -1054,7 +1058,10 @@ export async function discoverProject(options = {}) {
     serverCommand,
     screenSuggestion,
   });
-  const warnings = legacyPaths.length ? [formatLegacyLayoutWarning(legacyPaths)] : [];
+  const warnings = [
+    ...(legacyPaths.length ? [formatLegacyLayoutWarning(legacyPaths)] : []),
+    ...(legacyRuntimePaths.length ? [formatLegacyRuntimeLayoutWarning(legacyRuntimePaths)] : []),
+  ];
 
   return {
     version: 1,
@@ -1085,6 +1092,7 @@ export async function discoverProject(options = {}) {
       },
       screenCandidates: screenSuggestion.screenCandidates,
       legacyLayout: legacyPaths,
+      legacyRuntimeLayout: legacyRuntimePaths,
     },
     unresolved: buildUnresolved({
       serverCommand,

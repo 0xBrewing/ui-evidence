@@ -18,9 +18,9 @@
     "examples/next-playwright/ui-evidence/hooks/capture-flag.mjs",
     "examples/storybook/ui-evidence/config.yaml",
     "examples/vite-react/ui-evidence/config.yaml",
+    "agent-skill",
     "plugins",
     "schemas",
-    "skills",
     "src",
     "templates"
   ],

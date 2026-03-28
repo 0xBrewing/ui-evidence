@@ -82,14 +82,22 @@ test('compare, report, and review generate human-facing artifacts', async () => 
     await generateReports({ config, stageArg: 'landing', language: 'en' });
     await buildReviewPages({ config, stageArg: 'landing', language: 'en' });
 
-    const manifest = await readJson(path.join(tempDir, 'ui-evidence', 'screenshots', 'landing', 'manifest.json'));
-    const reviewHtml = await readFile(path.join(tempDir, 'ui-evidence', 'screenshots', 'landing', 'review', 'index.html'), 'utf8');
+    const stageDir = path.join(tempDir, 'ui-evidence', 'screenshots', 'landing');
+    const reviewDir = path.join(stageDir, 'review');
+    const manifest = await readJson(path.join(stageDir, 'manifest.json'));
+    const reviewHtml = await readFile(path.join(reviewDir, 'index.html'), 'utf8');
+    const report = await readFile(path.join(stageDir, 'report.en.md'), 'utf8');
 
     assert.equal(manifest.counts.completeCaptures, 1);
     assert.equal(manifest.captures[0].status, 'complete');
+    assert.equal(manifest.bundle.selfContained, true);
+    assert.equal(manifest.bundle.origin, 'local-stage');
     assert.ok(manifest.artifacts.review.endsWith('review/index.html'));
-    assert.match(reviewHtml, /Landing Review/);
+    assert.match(reviewHtml, /Quick Scan/);
     assert.match(reviewHtml, /hero__default__mobile-390__compare\.png/);
+    assert.match(reviewHtml, /\.\.\/comparison\/pairs\/hero__default__mobile-390__compare\.png/);
+    assert.doesNotMatch(reviewHtml, /overview\.png/);
+    assert.match(report, /capture run:/);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

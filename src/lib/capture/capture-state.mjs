@@ -1,10 +1,10 @@
 import path from 'node:path';
-import { fileExists, readJson, toPosixPath, writeJson } from '../util/fs.mjs';
+import { ensureDir, fileExists, readJson, toPosixPath, writeJson } from '../util/fs.mjs';
 
 const STATE_VERSION = 1;
 
 export function getCaptureStatePath(config, stage) {
-  return path.join(config.meta.artifactsRoot, stage.id, 'capture-state.json');
+  return path.join(config.meta.runtimeStateRoot, 'capture', `${stage.id}.json`);
 }
 
 export function buildCaptureStateKey({ phase, screenId, viewportId }) {
@@ -31,6 +31,7 @@ export async function loadCaptureState(config, stage) {
 
 export async function saveCaptureState(config, stage, state) {
   const filePath = getCaptureStatePath(config, stage);
+  await ensureDir(path.dirname(filePath));
   await writeJson(filePath, {
     version: STATE_VERSION,
     updatedAt: new Date().toISOString(),

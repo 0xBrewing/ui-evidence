@@ -36,7 +36,7 @@ servers:
 baseline:
   git:
     ref: main
-    worktreeDir: tmp/ui-evidence/main
+    worktreeDir: ui-evidence/tmp/baseline/main
     installCommand: pnpm install --frozen-lockfile
     server:
       command: pnpm dev

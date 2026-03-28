@@ -51,10 +51,10 @@ test('marketplace indexing target stays canonical and unique', () => {
   return (async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-marketplace-'));
     await mkdir(path.join(tempRoot, '.claude-plugin'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'skills'), { recursive: true });
+    await mkdir(path.join(tempRoot, 'agent-skill'), { recursive: true });
     await cp(path.join(repoRoot, '.gitignore'), path.join(tempRoot, '.gitignore'));
     await cp(path.join(repoRoot, '.claude-plugin'), path.join(tempRoot, '.claude-plugin'), { recursive: true });
-    await cp(path.join(repoRoot, 'skills'), path.join(tempRoot, 'skills'), { recursive: true });
+    await cp(path.join(repoRoot, 'agent-skill'), path.join(tempRoot, 'agent-skill'), { recursive: true });
     try {
       await access(path.join(repoRoot, 'plugins'));
       await cp(path.join(repoRoot, 'plugins'), path.join(tempRoot, 'plugins'), { recursive: true, force: true });
@@ -84,7 +84,7 @@ test('marketplace indexing target stays canonical and unique', () => {
       .split('\n')
       .filter((line) => line === 'SKILL.md' || line.endsWith('/SKILL.md'));
 
-    assert.deepEqual(skillFiles, ['skills/ui-evidence/SKILL.md']);
+    assert.deepEqual(skillFiles, ['agent-skill/ui-evidence/SKILL.md']);
   })();
 });
 

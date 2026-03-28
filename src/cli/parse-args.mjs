@@ -43,3 +43,29 @@ export function csvOption(value) {
     .map((entry) => entry.trim())
     .filter(Boolean);
 }
+
+export function keyValueOption(value) {
+  if (!value || value === true) {
+    return {};
+  }
+
+  return String(value)
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .reduce((result, entry) => {
+      const separatorIndex = entry.indexOf('=');
+      if (separatorIndex === -1) {
+        throw new Error(`Invalid key=value entry "${entry}".`);
+      }
+
+      const key = entry.slice(0, separatorIndex).trim();
+      const rawValue = entry.slice(separatorIndex + 1).trim();
+      if (!key) {
+        throw new Error(`Invalid key=value entry "${entry}".`);
+      }
+
+      result[key] = rawValue;
+      return result;
+    }, {});
+}

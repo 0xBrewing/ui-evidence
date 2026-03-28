@@ -49,7 +49,7 @@ That bootstrap should leave repo-local skill copies in `.agents/skills/ui-eviden
 3. Ask only about unresolved values.
 4. Create or patch `ui-evidence/config.yaml`.
 5. Add `ui-evidence/hooks/*` only if deterministic state is needed.
-6. Run `ui-evidence doctor`, then `ui-evidence doctor --deep` if route or wait-target confidence is still low.
+6. Run `ui-evidence doctor`, then `ui-evidence doctor --ready` if route or wait-target confidence is still low.
 7. Run `ui-evidence run`, `ui-evidence snapshot`, or `capture/compare/report/review`.
 8. Summarize:
    - `review/index.html`
@@ -63,6 +63,7 @@ That bootstrap should leave repo-local skill copies in `.agents/skills/ui-eviden
 ui-evidence discover --format json
 ui-evidence init --interactive --config ./ui-evidence/config.yaml
 ui-evidence doctor --config ./ui-evidence/config.yaml
+ui-evidence doctor --config ./ui-evidence/config.yaml --ready --profile mobile-en
 ui-evidence run --config ./ui-evidence/config.yaml --stage <stage-id>
 ui-evidence run --config ./ui-evidence/config.yaml --stage <stage-id> --before-ref main
 ui-evidence run --config ./ui-evidence/config.yaml --stage <stage-id> --after-attach http://127.0.0.1:3000 --resume

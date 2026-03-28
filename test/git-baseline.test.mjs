@@ -27,7 +27,7 @@ test('prepareGitBaseline creates and cleans a detached worktree', async () => {
       baseline: {
         git: {
           ref: 'main~1',
-          worktreeDir: 'tmp/ui-evidence/main',
+          worktreeDir: 'ui-evidence/tmp/baseline/main',
           server: {
             command: 'npm run dev',
             baseUrl: 'http://127.0.0.1:3100',

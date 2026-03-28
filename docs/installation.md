@@ -4,6 +4,7 @@ This file is meant to be handed to an LLM.
 
 Prefer the installed `ui-evidence` skill if it is already available through `skills add`.
 The skill is the agent-facing install surface. The package is the repo-local CLI that executes captures.
+This repo keeps its canonical skill source under `agent-skill/ui-evidence/`. Consumer repos should only keep the generated repo-local installs in `.agents/skills/ui-evidence/` or `.claude/skills/ui-evidence/`.
 
 If a user says "read this file and set up ui-evidence for this repo", follow the steps below and keep the setup small.
 
@@ -49,6 +50,8 @@ yarn ui-evidence install --agent both --config ./ui-evidence/config.yaml
 bunx ui-evidence install --agent both --config ./ui-evidence/config.yaml
 ```
 
+If generated skill/docs copies drift from the package source later, resync them with `ui-evidence install --sync`.
+
 This bootstrap should leave agent-recognized local skill copies in:
 
 - `.agents/skills/ui-evidence/` for Codex and other `.agents` clients
@@ -59,7 +62,7 @@ This bootstrap should leave agent-recognized local skill copies in:
 
 ```bash
 ui-evidence doctor --config ./ui-evidence/config.yaml
-ui-evidence doctor --config ./ui-evidence/config.yaml --deep
+ui-evidence doctor --config ./ui-evidence/config.yaml --ready
 ```
 
 Use the native package runner when needed:
@@ -92,9 +95,19 @@ ui-evidence run --config ./ui-evidence/config.yaml --stage <stage-id>
 ui-evidence run --config ./ui-evidence/config.yaml --stage <stage-id> --before-ref main
 ui-evidence run --config ./ui-evidence/config.yaml --stage <stage-id> --after-attach http://127.0.0.1:3000 --resume
 ui-evidence snapshot --config ./ui-evidence/config.yaml --scope <scope-id>
+ui-evidence snapshot --config ./ui-evidence/config.yaml --stage <stage-id> --profile mobile-en
+ui-evidence run --config ./ui-evidence/config.yaml --stage <stage-id> --params locale=ko,variant=core
 ```
 
-`ui-evidence review --stage <stage-id>` prefers stage comparison artifacts when they exist. If the stage has no before/after assets yet, it falls back to the latest snapshot `current` captures for that stage. If neither source exists, the command fails instead of writing an empty review.
+`ui-evidence review --stage <stage-id>` prefers stage comparison artifacts when they exist. If the stage has no before/after assets yet, it falls back to the latest snapshot `current` captures for that stage. If neither source exists, the command fails instead of writing an empty review. When snapshot fallback is used, ui-evidence materializes those images into the stage folder so the stage bundle stays portable by itself.
+
+The canonical runtime layout is:
+
+```text
+ui-evidence/screenshots/   # human-facing artifacts
+ui-evidence/state/         # durable capture/shared/fixture state
+ui-evidence/tmp/           # temporary run and baseline worktrees
+```
 
 Return:
 
@@ -102,3 +115,5 @@ Return:
 - `report.<lang>.md`
 - `manifest.json`
 - important pair and overview images, or current snapshot captures and overview images
+
+Open `review/index.html` directly from disk. A local web server is not required.

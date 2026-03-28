@@ -5,6 +5,8 @@ import Ajv from 'ajv';
 import { parse as parseYaml } from 'yaml';
 import {
   DEFAULT_CONFIG_PATH,
+  DEFAULT_RUNTIME_STATE_ROOT,
+  DEFAULT_RUNTIME_TEMP_ROOT,
   LEGACY_CONFIG_PATH,
   detectLegacyLayout,
   formatLegacyLayoutWarning,
@@ -66,6 +68,8 @@ export async function loadConfig(configPath = DEFAULT_CONFIG_PATH) {
   const configDir = path.dirname(absoluteConfigPath);
   const projectRoot = path.resolve(configDir, parsedConfig.project.rootDir ?? '.');
   const artifactsRoot = path.resolve(projectRoot, parsedConfig.artifacts.rootDir);
+  const runtimeStateRoot = path.resolve(projectRoot, parsedConfig.runtime?.stateDir ?? DEFAULT_RUNTIME_STATE_ROOT);
+  const runtimeTempRoot = path.resolve(projectRoot, parsedConfig.runtime?.tempDir ?? DEFAULT_RUNTIME_TEMP_ROOT);
 
   return {
     ...parsedConfig,
@@ -74,6 +78,8 @@ export async function loadConfig(configPath = DEFAULT_CONFIG_PATH) {
       configDir,
       projectRoot,
       artifactsRoot,
+      runtimeStateRoot,
+      runtimeTempRoot,
       schemaPath: SCHEMA_PATH,
     },
   };

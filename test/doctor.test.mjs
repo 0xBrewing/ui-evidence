@@ -24,7 +24,7 @@ function createServer(html) {
   });
 }
 
-test('doctor --deep validates routes and wait targets without writing screenshots', async () => {
+test('doctor --ready validates routes and wait targets without writing screenshots', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-doctor-'));
   const runtime = await createServer('<main data-testid="screen-home">Home</main>');
 
@@ -68,20 +68,20 @@ stages:
 
     const result = await runDoctor({
       config: path.join(tempDir, 'ui-evidence', 'config.yaml'),
-      deep: true,
+      ready: true,
       stageArg: 'landing',
       screenIds: ['home'],
     });
 
     assert.equal(result.ok, true);
-    assert.ok(result.checks.some((check) => check.key === 'deep:after:landing/home' && check.status === 'pass'));
+    assert.ok(result.checks.some((check) => check.key === 'ready:after:landing/home' && check.status === 'pass'));
   } finally {
     await new Promise((resolve) => runtime.server.close(resolve));
     await rm(tempDir, { recursive: true, force: true });
   }
 });
 
-test('doctor --deep reports invalid wait targets as failures', async () => {
+test('doctor --ready reports invalid wait targets as failures', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-doctor-fail-'));
   const runtime = await createServer('<main data-testid="screen-home">Home</main>');
 
@@ -125,13 +125,13 @@ stages:
 
     const result = await runDoctor({
       config: path.join(tempDir, 'ui-evidence', 'config.yaml'),
-      deep: true,
+      ready: true,
       stageArg: 'landing',
       screenIds: ['home'],
     });
 
     assert.equal(result.ok, false);
-    assert.ok(result.checks.some((check) => check.key === 'deep:after:landing/home' && check.status === 'fail'));
+    assert.ok(result.checks.some((check) => check.key === 'ready:after:landing/home' && check.status === 'fail'));
   } finally {
     await new Promise((resolve) => runtime.server.close(resolve));
     await rm(tempDir, { recursive: true, force: true });
@@ -192,7 +192,7 @@ stages:
   }
 });
 
-test('doctor --deep validates the configured baseline ref even without --before-ref override', async () => {
+test('doctor --ready validates the configured baseline ref even without --before-ref override', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ui-evidence-doctor-baseline-'));
   const runtime = await createServer('<main data-testid="screen-home">Home</main>');
 
@@ -263,13 +263,13 @@ stages:
 
     const result = await runDoctor({
       config: path.join(tempDir, 'ui-evidence', 'config.yaml'),
-      deep: true,
+      ready: true,
       stageArg: 'landing',
       screenIds: ['home'],
     });
 
     assert.equal(result.ok, true);
-    assert.ok(result.checks.some((check) => check.key === 'deep:before:landing/home' && check.status === 'pass'));
+    assert.ok(result.checks.some((check) => check.key === 'ready:before:landing/home' && check.status === 'pass'));
   } finally {
     await new Promise((resolve) => runtime.server.close(resolve));
     await rm(tempDir, { recursive: true, force: true });

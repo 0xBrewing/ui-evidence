@@ -30,6 +30,14 @@
         "overviewViewport": { "type": "string" }
       }
     },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stateDir": { "type": "string", "default": "ui-evidence/state" },
+        "tempDir": { "type": "string", "default": "ui-evidence/tmp" }
+      }
+    },
     "capture": {
       "type": "object",
       "additionalProperties": false,
@@ -78,6 +86,10 @@
           "items": { "type": "string" }
         }
       }
+    },
+    "profiles": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/profile" }
     },
     "scopes": {
       "type": "array",
@@ -205,10 +217,28 @@
         "label": { "type": "string", "minLength": 1 },
         "path": { "type": "string", "minLength": 1 },
         "locale": { "type": "string" },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
         "auth": { "$ref": "#/$defs/auth" },
         "waitFor": { "$ref": "#/$defs/waitFor" },
         "hooks": { "$ref": "#/$defs/hooks" },
         "screenshot": { "$ref": "#/$defs/screenshot" }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "viewportIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        }
       }
     },
     "scopeTarget": {

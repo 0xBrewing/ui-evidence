@@ -178,12 +178,13 @@ async function buildPairImage(pair, outputPath) {
 }
 
 async function buildOverviewImage(stageId, pairOutputs, outputPath) {
+  const density = 2;
   const columns = 2;
-  const pagePadding = 28;
-  const gap = 20;
-  const titleHeight = 60;
-  const cardWidth = 420;
-  const cardHeight = 260;
+  const pagePadding = 28 * density;
+  const gap = 20 * density;
+  const titleHeight = 60 * density;
+  const cardWidth = 420 * density;
+  const cardHeight = 260 * density;
 
   const resized = await Promise.all(
     pairOutputs.map(async (item) => {
@@ -205,7 +206,7 @@ async function buildOverviewImage(stageId, pairOutputs, outputPath) {
         height: titleHeight,
         text: `${stageId} / overview`,
         color: '#2b1e14',
-        fontSize: 24,
+        fontSize: 48,
         weight: 700,
       }),
       left: pagePadding,

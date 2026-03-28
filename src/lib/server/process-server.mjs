@@ -1,5 +1,5 @@
 import { resolveProjectPath } from '../../config/load-config.mjs';
-import { spawnCommand, stopChildProcess } from '../util/process.mjs';
+import { getChildProcessLogTail, spawnCommand, stopChildProcess } from '../util/process.mjs';
 
 async function waitForUrl(url, timeoutMs) {
   const startedAt = Date.now();
@@ -32,10 +32,20 @@ export async function startServerSpec(server, options = {}) {
       cwd: options.cwd,
       env: resolved.env,
       label: options.label,
+      streamOutput: false,
     });
 
-    await waitForUrl(resolved.readyUrl, resolved.timeoutMs);
-    return { child, label: options.label, mode: resolved.mode };
+    try {
+      await waitForUrl(resolved.readyUrl, resolved.timeoutMs);
+      return { child, label: options.label, mode: resolved.mode };
+    } catch (error) {
+      const tail = options.showServerLogOnFail ? getChildProcessLogTail(child) : '';
+      await stopChildProcess(child);
+      if (tail) {
+        throw new Error(`${error instanceof Error ? error.message : String(error)}\n${tail}`);
+      }
+      throw error;
+    }
   }
 
   if (resolved.readyUrl) {
@@ -54,6 +64,7 @@ export async function startServer(config, phase, overrides = {}) {
   return startServerSpec(server, {
     cwd,
     label: overrides.label ?? phase,
+    showServerLogOnFail: overrides.showServerLogOnFail,
   });
 }
 
@@ -81,4 +92,8 @@ export function resolveServerSpec(server) {
     readyUrl,
     timeoutMs: server.timeoutMs ?? 60_000,
   };
+}
+
+export function getServerLogTail(handle, count = 40) {
+  return getChildProcessLogTail(handle?.child, count);
 }
